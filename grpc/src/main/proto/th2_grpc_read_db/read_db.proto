@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package th2.read_db;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "com.exactpro.th2.read.db.grpc";
+
+service ReadDb {
+  rpc Execute (QueryRequest) returns (stream QueryResponse);
+  rpc StartPulling (DbPullRequest) returns (DbPullResponse);
+  rpc StopPulling (StopPullingRequest) returns (google.protobuf.Empty);
+}
+
+message SourceId {
+  string id = 1;
+}
+
+message QueryId {
+  string id = 2;
+}
+
+message QueryParameters {
+  map<string, string> values = 1;
+}
+
+message QueryRequest {
+  SourceId source_id = 1;
+  QueryId query_id = 2;
+  QueryParameters parameters = 3;
+  AssociatedMessageType associated_message_type = 4;
+}
+
+message QueryResponse {
+  map<string, string> row = 1;
+}
+
+message AssociatedMessageType {
+  string name = 1;
+}
+
+message DbPullRequest {
+  SourceId source_id = 1;
+  QueryId init_query_id = 2;
+  QueryParameters init_parameters = 3;
+  repeated string use_columns = 4;
+  QueryId update_query_id = 5;
+  QueryParameters update_parameters = 6;
+  google.protobuf.Duration pull_interval = 7;
+  AssociatedMessageType associated_message_type = 8;
+}
+
+message PullTaskId {
+  string id = 1;
+}
+
+message DbPullResponse {
+  PullTaskId id = 1;
+}
+
+message StopPullingRequest {
+  PullTaskId id = 1;
+}

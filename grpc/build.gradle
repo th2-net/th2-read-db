@@ -1,0 +1,168 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id "com.google.protobuf" version "0.8.15"
+}
+
+group = 'com.exactpro.th2'
+version = release_version
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+ext {
+    grpcVersion         = '1.32.1'
+    protobufVersion     = '3.13.0'
+    genDir              = file("${project.projectDir}/src/gen")
+    serviceGeneratorVersion = '3.2.2'
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}
+
+dependencies {
+    implementation platform('com.exactpro.th2:bom:3.2.0')
+
+    api "com.google.protobuf:protobuf-java-util"
+    api "io.grpc:grpc-stub"
+    implementation "io.grpc:grpc-protobuf"
+    implementation "io.grpc:grpc-core"
+    implementation "io.grpc:grpc-netty"
+
+    implementation "javax.annotation:javax.annotation-api:1.3.2"
+
+    implementation "com.exactpro.th2:grpc-service-generator:$serviceGeneratorVersion"
+}
+
+sourceSets {
+    main {
+        proto {
+            srcDirs 'src/main/proto'
+        }
+        java {
+            srcDirs 'src/gen/main/java', 'src/gen/main/grpc', 'src/gen/main/services/java/src'
+        }
+        resources {
+            srcDirs 'src/gen/main/services/java/resources'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+        services {
+            artifact = "com.exactpro.th2:grpc-service-generator:${serviceGeneratorVersion}:all@jar"
+        }
+    }
+    generateProtoTasks.generatedFilesBaseDir = genDir
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+            services {
+                option 'javaInterfacesPath=./java/src'
+                option 'javaInterfacesImplPath=./java/src'
+                option 'javaMetaInfPath=./java/resources'
+                option 'pythonPath=./python'
+            }
+        }
+        ofSourceSet('main')
+    }
+}
+
+compileJava.dependsOn.add('generateProto')
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+// conditionals for publications
+tasks.withType(PublishToMavenRepository) {
+    onlyIf {
+        (repository == publishing.repositories.nexusRepository &&
+            project.hasProperty('nexus_user') &&
+            project.hasProperty('nexus_password') &&
+            project.hasProperty('nexus_url')) ||
+        (repository == publishing.repositories.sonatype &&
+            project.hasProperty('sonatypeUsername') &&
+            project.hasProperty('sonatypePassword'))
+    }
+}
+tasks.withType(Sign) {
+    onlyIf { project.hasProperty('signingKey') &&
+        project.hasProperty('signingPassword')
+    }
+}
+// disable running task 'initializeSonatypeStagingRepository' on a gitlab
+tasks.whenTaskAdded {task ->
+    if(task.name.equals('initializeSonatypeStagingRepository') &&
+        !(project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword'))
+    ) {
+        task.enabled = false
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+              name = rootProject.name
+              packaging = 'jar'
+              description = rootProject.description
+              url = vcs_url
+              scm {
+                url = vcs_url
+              }
+              licenses {
+                license {
+                  name = 'The Apache License, Version 2.0'
+                  url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+              }
+              developers {
+                developer {
+                  id = 'developer'
+                  name = 'developer'
+                  email = 'developer@exactpro.com'
+                }
+              }
+              scm {
+                url = vcs_url
+              }
+            }
+        }
+    }
+    repositories {
+//Nexus repo to publish from gitlab
+        maven {
+            name = 'nexusRepository'
+            credentials {
+                username = project.findProperty('nexus_user')
+                password = project.findProperty('nexus_password')
+            }
+            url = project.findProperty('nexus_url')
+        }
+    }
+}
+
+signing {
+    def signingKey = findProperty("signingKey")
+    def signingPassword = findProperty("signingPassword")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications.mavenJava
+}
+
+clean {
+    delete genDir
+}
