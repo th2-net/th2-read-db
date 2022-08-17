@@ -55,6 +55,9 @@ dependencies {
     runtimeOnly('org.apache.hive:hive-jdbc:3.1.3') {
         because('impala support')
     }
+    runtimeOnly('com.oracle.database.jdbc:ojdbc11:21.6.0.0.1') {
+        because('oracle support')
+    }
     //endregion
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
