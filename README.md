@@ -150,7 +150,10 @@ spec:
       maxBatchSize: 100
   pins:
     - name: server
-      connection-type: grpc
+      connection-type: grpc-server
+      service-classes:
+        - com.exactpro.th2.read.db.grpc.ReadDbService
+        - th2.read_db.ReadDbService
     - name: store
       connection-type: mq
       attributes: ['raw', 'publish', 'store']
