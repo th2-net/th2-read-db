@@ -174,6 +174,7 @@ private fun createReader(
         },
     )
     closeResource("reader", reader::close)
+    reader.start()
     return reader
 }
 
@@ -233,7 +234,7 @@ private fun configureMessageStoring(
 
     val nanosInSecond = TimeUnit.SECONDS.toNanos(1)
 
-    val running = AtomicBoolean()
+    val running = AtomicBoolean(true)
     val drainFuture = executor.submit(Saver<SessionKey, RawMessage.Builder>(
         messagesQueue,
         running,
