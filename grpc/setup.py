@@ -100,7 +100,7 @@ with open('package_info.json', 'r') as file:
 package_name = package_info['package_name'].replace('-', '_')
 package_version = package_info['package_version']
 
-with open('../README.md', 'r') as file:
+with open('README.md', 'r') as file:
     long_description = file.read()
 
 packages = [''] + find_packages(include=[package_name, f'{package_name}.*'])
