@@ -103,7 +103,7 @@ jobs:
         with:
           java-version: '11'
       - name: Build with Gradle
-        run: ./gradlew --info clean :grpc-read-db:build :grpc-read-db:publish
+        run: ./gradlew --info --warning-mode all clean :grpc-read-db:build :grpc-read-db:publish
         env:
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
