@@ -18,6 +18,6 @@ package com.exactpro.th2.read.db.core.util
 
 import java.sql.ResultSet
 
-fun ResultSet.getColumnValue(label: String): Any {
+fun ResultSet.getColumnValue(label: String): Any? {
     return getObject(label) // TODO: conversion from SQL to normal types
 }

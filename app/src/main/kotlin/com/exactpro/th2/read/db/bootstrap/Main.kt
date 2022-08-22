@@ -197,7 +197,7 @@ private fun TableRow.toCsvBody(): ByteArray {
             .withSeparator(',')
             .build().use { writer ->
                 val columnNames = columns.keys.toTypedArray()
-                val values = columnNames.map { name -> columns[name].toString() }
+                val values: Array<String?> = columnNames.map { name -> columns[name]?.toString() }
                     .toTypedArray()
                 writer.writeNext(columnNames)
                 writer.writeNext(values)

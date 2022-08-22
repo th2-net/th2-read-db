@@ -30,7 +30,7 @@ data class QueryId(val id: String)
 
 data class TaskId(val id: String)
 
-data class TableRow(val columns: Map<String, Any>, val associatedMessageType: String? = null)
+data class TableRow(val columns: Map<String, Any?>, val associatedMessageType: String? = null)
 
 private class DataSourceIdDeserializer : FromStringDeserializer<DataSourceId>(DataSourceId::class.java) {
     override fun _deserialize(value: String, ctxt: DeserializationContext?): DataSourceId = DataSourceId(value)

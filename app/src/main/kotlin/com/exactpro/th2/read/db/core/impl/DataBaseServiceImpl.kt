@@ -100,7 +100,7 @@ private fun ResultSet.extractColumns(): List<String> = metaData.run {
 
 private fun ResultSet.transform(columns: Collection<String>): TableRow = TableRow(columns.associateWith(this::getColumnValue.asRegularValues()))
 
-private fun ((String) -> Any).asRegularValues(): (String) -> Any = {
+private fun ((String) -> Any?).asRegularValues(): (String) -> Any? = {
     when (val value = this(it)) {
         is Date -> value.toLocalDate()
         is Time -> value.toLocalTime()
