@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import mu.KotlinLogging
+import java.sql.Clob
 import java.sql.Date
 import java.sql.ResultSet
 import java.sql.Time
@@ -105,6 +106,7 @@ private fun ((String) -> Any?).asRegularValues(): (String) -> Any? = {
         is Date -> value.toLocalDate()
         is Time -> value.toLocalTime()
         is Timestamp -> value.toInstant()
+        is Clob -> value.characterStream.readText()
         else -> value
     }
 }
