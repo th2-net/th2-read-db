@@ -75,13 +75,14 @@ class DataBaseServiceImpl(
             connection.close()
             throw QueryExecutionException("cannot execute $queryId query for $dataSourceId connection", ex)
         }
+        val associatedMessageType: String? = queryHolder.associatedMessageType
         return flow {
             var columns: Collection<String>? = null
             while (resultSet.next()) {
                 if (columns == null) {
                     columns = resultSet.extractColumns()
                 }
-                emit(resultSet.transform(columns))
+                emit(resultSet.transform(columns, associatedMessageType))
             }
         }.onCompletion { reason ->
             reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
@@ -99,7 +100,10 @@ private fun ResultSet.extractColumns(): List<String> = metaData.run {
     (1..columnCount).map { getColumnLabel(it) }
 }
 
-private fun ResultSet.transform(columns: Collection<String>): TableRow = TableRow(columns.associateWith(this::getColumnValue.asRegularValues()))
+private fun ResultSet.transform(
+    columns: Collection<String>,
+    associatedMessageType: String?,
+): TableRow = TableRow(columns.associateWith(this::getColumnValue.asRegularValues()), associatedMessageType)
 
 private fun ((String) -> Any?).asRegularValues(): (String) -> Any? = {
     when (val value = this(it)) {

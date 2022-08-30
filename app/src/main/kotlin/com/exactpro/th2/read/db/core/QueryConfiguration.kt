@@ -19,4 +19,5 @@ package com.exactpro.th2.read.db.core
 data class QueryConfiguration(
     val query: String,
     val defaultParameters: QueryParametersValues = emptyMap(),
+    val messageType: String? = null,
 )

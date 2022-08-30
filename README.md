@@ -64,6 +64,8 @@ The list of queries that can be executed by read-db.
   The **type** part can be omitted if the type is `varchar`.
   Examples: `${id:integer}`, `${registration_time:timestamp}`, `${first_name}`
 + defaultParameters - the default values for parameters. They will be used if the parameter was not specified in the request
++ messageType - the message type that should be associated with this query.
+  If it is set the read-db will set a property `th2.csv.override_message_type` with specified value
 
 ### startupTasks
 

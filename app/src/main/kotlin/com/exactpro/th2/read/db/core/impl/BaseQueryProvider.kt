@@ -40,7 +40,7 @@ class BaseQueryProvider(
                 LOGGER.warn { "Default parameter $it was not found in query. Known parameters: ${parameters.keys}" }
             }
         }
-        QueryHolder(processedQuery, parameters, cfg.defaultParameters).also {
+        QueryHolder(processedQuery, parameters, cfg.defaultParameters, cfg.messageType).also {
             LOGGER.trace { "Holder for $id query created: $it" }
         }
     }

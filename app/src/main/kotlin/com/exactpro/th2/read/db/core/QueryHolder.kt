@@ -22,6 +22,7 @@ data class QueryHolder(
     val query: String,
     val parameters: Map<String, List<ParameterInfo>>,
     val defaultParameters: QueryParametersValues,
+    val associatedMessageType: String? = null,
 )
 
 data class ParameterInfo(
