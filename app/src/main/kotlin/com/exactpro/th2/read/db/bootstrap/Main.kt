@@ -48,6 +48,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
 import java.io.ByteArrayOutputStream
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.Deque
 import java.util.concurrent.ArrayBlockingQueue
@@ -197,12 +198,17 @@ private fun TableRow.toCsvBody(): ByteArray {
             .withSeparator(',')
             .build().use { writer ->
                 val columnNames = columns.keys.toTypedArray()
-                val values: Array<String?> = columnNames.map { name -> columns[name]?.toString() }
+                val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
                     .toTypedArray()
                 writer.writeNext(columnNames)
                 writer.writeNext(values)
             }
     }.toByteArray()
+}
+
+private fun Any.toStringValue(): String = when (this) {
+    is BigDecimal -> toPlainString()
+    else -> toString()
 }
 
 private fun createScope(closeResource: (name: String, resource: () -> Unit) -> Unit): CoroutineScope {
