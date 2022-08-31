@@ -206,9 +206,9 @@ private fun TableRow.toCsvBody(): ByteArray {
 }
 
 private fun Any.toStringValue(): String = when (this) {
-    is BigDecimal -> toPlainString()
-    is Double -> toBigDecimal().toPlainString()
-    is Float -> toBigDecimal().toPlainString()
+    is BigDecimal -> stripTrailingZeros().toPlainString()
+    is Double -> toBigDecimal().toStringValue()
+    is Float -> toBigDecimal().toStringValue()
     else -> toString()
 }
 
