@@ -185,7 +185,6 @@ private fun TableRow.toMessage(dataSourceId: DataSourceId): RawMessage.Builder {
         .apply {
             sessionAlias = dataSourceId.id
             direction = Direction.FIRST
-            metadataBuilder.timestamp = Instant.now().toTimestamp()
             associatedMessageType?.also {
                 metadataBuilder.putProperties("th2.csv.override_message_type", it)
             }
@@ -256,6 +255,8 @@ private fun configureMessageStoring(
                         prev + 1
                     }
                 }.let(::requireNotNull)
+
+                metadataBuilder.timestamp = Instant.now().toTimestamp()
             }
         }
     ) { messages ->
