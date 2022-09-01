@@ -34,7 +34,7 @@ fun PreparedStatement.set(paramIndex: Int, value: String?, type: SQLType) {
     try {
         setObject(paramIndex, value, type)
     } catch (ex: SQLFeatureNotSupportedException) {
-        LOGGER.warn(ex) { "Feature with auto object conversion is not supported by the driver. Back of to manual conversion" }
+        LOGGER.debug(ex) { "Feature with auto object conversion is not supported by the driver. Back of to manual conversion" }
         setManual(paramIndex, value, type)
     }
 }
