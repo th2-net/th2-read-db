@@ -37,8 +37,8 @@ class ProtoGenerator(Command):
         pass
 
     def run(self):
-        proto_path = os.path.abspath('src/main/proto')
-        gen_path = os.path.abspath('src/gen/main/python')
+        proto_path = os.path.abspath('proto')
+        gen_path = os.path.abspath('build/generated/source/proto/main/services/python')
 
         if not os.path.exists(gen_path):
             os.makedirs(gen_path)
@@ -70,9 +70,9 @@ class ProtoGenerator(Command):
 class CustomDist(sdist):
 
     def run(self):
-        copy_tree(f'src/main/proto/{package_name}', package_name)
+        copy_tree(f'proto/{package_name}', package_name)
 
-        copy_tree(f'src/gen/main/python/{package_name}', package_name)
+        copy_tree(f'build/generated/source/proto/main/services/python/{package_name}', package_name)
         Path(f'{package_name}/__init__.py').touch()
         Path(f'{package_name}/py.typed').touch()
 
