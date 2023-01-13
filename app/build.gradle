@@ -1,5 +1,5 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.5.32'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.21'
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
 }
@@ -11,27 +11,27 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 ext {
-    coroutines_version = '1.5.2'
+    coroutines_version = '1.6.4'
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = "11"
-        freeCompilerArgs += '-Xopt-in=kotlin.RequiresOptIn'
+        freeCompilerArgs += '-opt-in=kotlin.RequiresOptIn'
     }
 }
 
-configurations.all {
+configurations.configureEach {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
 }
 
 dependencies {
-    implementation platform('com.exactpro.th2:bom:3.2.0')
+    implementation platform('com.exactpro.th2:bom:4.0.2')
 
     implementation project(':grpc-read-db')
 
-    implementation 'com.exactpro.th2:common:3.39.3'
+    implementation 'com.exactpro.th2:common:3.42.0'
     implementation 'org.slf4j:slf4j-api'
 
     implementation('org.apache.commons:commons-dbcp2:2.9.0') {
@@ -43,7 +43,7 @@ dependencies {
     }
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
-    implementation 'io.github.microutils:kotlin-logging:2.1.14'
+    implementation 'io.github.microutils:kotlin-logging:3.0.0'
 
     //region Drivers
     runtimeOnly('org.postgresql:postgresql:42.4.1') {
@@ -60,10 +60,10 @@ dependencies {
     }
     //endregion
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
-    testImplementation "io.strikt:strikt-core:0.32.0"
+    testImplementation "io.strikt:strikt-core:0.34.1"
 
     testImplementation platform('org.testcontainers:testcontainers-bom:1.17.3')
     testImplementation 'org.testcontainers:testcontainers'
@@ -109,10 +109,6 @@ dockerPrepare {
 
 docker {
     copySpec.from(tarTree("$buildDir/distributions/${applicationName}.tar"))
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "11"
 }
 
 application {

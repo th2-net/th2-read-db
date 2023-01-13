@@ -34,7 +34,10 @@ import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.verifyZeroInteractions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -85,7 +88,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives data from database`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
-        runBlockingTest {
+        runTest {
             val reader = DataBaseReader.createDataBaseReader(
                 DataBaseReaderConfiguration(
                     mapOf(
@@ -117,6 +120,7 @@ internal class DataBaseReaderIntegrationTest {
                 ),
                 listener
             )
+            advanceUntilIdle()
 
             genericRowListener.assertCaptured(persons)
             listener.assertCaptured(persons)
@@ -129,7 +133,7 @@ internal class DataBaseReaderIntegrationTest {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
         val interval = Duration.ofMillis(100)
-        runBlockingTest {
+        runTest {
             val reader = DataBaseReader.createDataBaseReader(
                 DataBaseReaderConfiguration(
                     mapOf(
@@ -166,17 +170,20 @@ internal class DataBaseReaderIntegrationTest {
                 listener,
             )
 
+            advanceTimeBy(interval.toMillis())
 
             val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
             insertData(newData)
 
+            advanceTimeBy(interval.toMillis() * 2)
             delay(interval.toMillis() * 2)
-
 
             genericUpdateListener.assertCaptured(newData)
             listener.assertCaptured(newData)
             verifyZeroInteractions(genericRowListener)
             reader.stopPullTask(taskId)
+
+            advanceUntilIdle()
         }
     }
 

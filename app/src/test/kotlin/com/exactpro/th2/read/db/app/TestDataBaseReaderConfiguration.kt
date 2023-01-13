@@ -46,18 +46,22 @@ internal class TestDataBaseReaderConfiguration {
 
         override fun loadDictionary(alias: String?): InputStream = TODO("Not yet implemented")
 
+        @Deprecated("Deprecated in Java")
         override fun readDictionary(): InputStream = TODO("Not yet implemented")
 
+        @Deprecated("Deprecated in Java")
         override fun readDictionary(dictionaryType: DictionaryType?): InputStream = TODO("Not yet implemented")
 
         override fun getConfigurationManager(): ConfigurationManager = TODO("Not yet implemented")
 
         override fun getPathToCustomConfiguration(): Path = TODO("Not yet implemented")
 
+        @Deprecated("Deprecated in Java")
         override fun getPathToDictionaryTypesDir(): Path = TODO("Not yet implemented")
 
         override fun getPathToDictionaryAliasesDir(): Path = TODO("Not yet implemented")
 
+        @Deprecated("Deprecated in Java")
         override fun getOldPathToDictionariesDir(): Path = TODO("Not yet implemented")
     }
 
