@@ -63,30 +63,11 @@ jobs:
         run: echo ${{ steps.java_grpc_ver.outputs.value }}
       - name: Show grpc python release version
         run: echo ${{ steps.python_grpc_ver.outputs.value }}
-  changes:
-    name: Collect changed files
-    runs-on: ubuntu-20.04
-    outputs:
-      app: ${{ steps.filter.outputs.app }}
-      grpc: ${{ steps.filter.outputs.grpc }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          base: ${{ github.ref }}
-          filters: |
-            app:
-              - 'app/**'
-            grpc:
-              - 'grpc/**'
   build-and-publish-java:
     name: Build and publish Java distributions
     needs:
-      - changes
       - versions
     runs-on: ubuntu-20.04
-    if: ${{ needs.changes.outputs.grpc == 'true' }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup Gradle
@@ -106,10 +87,8 @@ jobs:
   build-and-publish-python:
     name: Build and publish Python distributions to PyPI
     needs:
-      - changes
       - versions
     runs-on: ubuntu-20.04
-    if: ${{ needs.changes.outputs.grpc == 'true' }}
     steps:
       - uses: actions/checkout@v3
       - name: Set version for current build in package_info.json
@@ -151,9 +130,6 @@ jobs:
       - build-and-publish-python
       - build-and-publish-java
       - versions
-    if: |
-      always() &&
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true')
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 11
