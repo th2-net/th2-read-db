@@ -71,8 +71,9 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform {
-        excludeTags('integration-test')
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
     }
 }
 
@@ -80,6 +81,19 @@ tasks.register('integrationTest', Test) {
     group = 'verification'
     useJUnitPlatform {
         includeTags('integration-test')
+    }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.register('unitTest', Test) {
+    group = 'verification'
+    useJUnitPlatform {
+        excludeTags('integration-test')
+    }
+    testLogging {
+        showStandardStreams = true
     }
 }
 
