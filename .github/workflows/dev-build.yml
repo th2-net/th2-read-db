@@ -56,7 +56,7 @@ jobs:
         run: echo value="${{ steps.root_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-SNAPSHOT" >> $GITHUB_OUTPUT
       - name: Build custom grpc package version
         id: python_grpc_ver
-        run: echo value="${{ steps.grpc_ver.outputs.value }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
+        run: echo value="${{ steps.grpc_ver.outputs.release_version }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
       - name: Show app release version
         run: echo ${{ steps.app_release_ver.outputs.value }}
       - name: Show grpc java release version
