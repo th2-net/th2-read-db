@@ -192,7 +192,7 @@ private fun TableRow.toMessage(dataSourceId: DataSourceId): RawMessage.Builder {
 }
 
 private fun TableRow.toCsvBody(): ByteArray {
-    return ByteArrayOutputStream().also {
+    return ByteArrayOutputStream().use {
         CSVWriterBuilder(it.writer())
             .withSeparator(',')
             .build().use { writer ->
@@ -202,6 +202,7 @@ private fun TableRow.toCsvBody(): ByteArray {
                 writer.writeNext(columnNames)
                 writer.writeNext(values)
             }
+        it
     }.toByteArray()
 }
 
@@ -242,7 +243,8 @@ private fun configureMessageStoring(
     val nanosInSecond = TimeUnit.SECONDS.toNanos(1)
 
     val running = AtomicBoolean(true)
-    val drainFuture = executor.submit(Saver<SessionKey, RawMessage.Builder>(
+    val componentBookName = factory.boxConfiguration.bookName
+    val drainFuture = executor.submit(Saver(
         messagesQueue,
         running,
         cfg.publication.maxBatchSize,
@@ -257,8 +259,10 @@ private fun configureMessageStoring(
                         prev + 1
                     }
                 }.let(::requireNotNull)
-
-                metadataBuilder.timestamp = Instant.now().toTimestamp()
+                metadataBuilder.idBuilder.apply {
+                    timestamp = Instant.now().toTimestamp()
+                    bookName = componentBookName
+                }
             }
         }
     ) { messages ->

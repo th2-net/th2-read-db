@@ -31,8 +31,11 @@ dependencies {
 
     implementation project(':grpc-read-db')
 
-    implementation 'com.exactpro.th2:common:3.42.0'
+    implementation 'com.exactpro.th2:common:5.0.0-dev-version-5-3838510969-SNAPSHOT'
     implementation 'org.slf4j:slf4j-api'
+    implementation('com.fasterxml.jackson.core:jackson-databind') {
+        because('common does not provide it as api dependency')
+    }
 
     implementation('org.apache.commons:commons-dbcp2:2.9.0') {
         because('connection pool')

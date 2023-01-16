@@ -19,6 +19,7 @@ package com.exactpro.th2.read.db.app
 import com.exactpro.th2.common.schema.configuration.ConfigurationManager
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.AbstractCommonFactory
+import com.exactpro.th2.common.schema.factory.FactorySettings
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryConfiguration
@@ -37,7 +38,7 @@ import java.nio.file.Path
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class TestDataBaseReaderConfiguration {
-    private val factory = object : AbstractCommonFactory() {
+    private val factory = object : AbstractCommonFactory(FactorySettings()) {
         fun mapper(): ObjectMapper = MAPPER
 
         override fun loadSingleDictionary(): InputStream = TODO("Not yet implemented")

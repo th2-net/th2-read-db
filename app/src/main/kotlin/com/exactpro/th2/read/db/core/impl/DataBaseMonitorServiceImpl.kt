@@ -27,6 +27,7 @@ import com.exactpro.th2.read.db.core.UpdateListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.onCompletion
@@ -86,7 +87,7 @@ class DataBaseMonitorServiceImpl(
         LOGGER.info { "Task $id completed" }
     }
 
-    private suspend fun CoroutineScope.poolUpdates(
+    private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
         initQueryId: QueryId,
         initParameters: QueryParametersValues,
@@ -132,7 +133,7 @@ class DataBaseMonitorServiceImpl(
             } catch (ex: Exception) {
                 updateListener.onError(dataSourceId, ex)
             }
-        } while (isActive)
+        } while (currentCoroutineContext().isActive)
     }
 
     companion object {
