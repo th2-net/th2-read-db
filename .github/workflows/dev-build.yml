@@ -17,6 +17,7 @@ jobs:
       grpc-java: ${{ steps.java_grpc_ver.outputs.value }}
       grpc-python: ${{ steps.python_grpc_ver.outputs.value }}
       app: ${{ steps.app_release_ver.outputs.value }}
+      core: ${{ steps.core_release_ver.outputs.value }}
       root: ${{ steps.root_release.outputs.value }}
     steps:
       - uses: actions/checkout@v3
@@ -32,6 +33,12 @@ jobs:
         uses: christian-draeger/read-properties@1.1.1
         with:
           path: grpc/gradle.properties
+          properties: release_version
+      - name: Get app release_version
+        id: core_ver
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: core/gradle.properties
           properties: release_version
       - name: Get app release_version
         id: app_ver
@@ -51,9 +58,30 @@ jobs:
       - name: Build custom grpc release version for java
         id: java_grpc_ver
         run: echo value="${{ steps.grpc_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
+      - name: Write custom release version to gRPC java
+        uses: christian-draeger/write-properties@1.0.1
+        with:
+          path: grpc/gradle.properties
+          property: release_version
+          value: ${{ steps.java_grpc_ver.outputs.value }}
+      - name: Build custom core release version for java
+        id: core_release_ver
+        run: echo value="${{ steps.core_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
+      - name: Write custom release version to core java
+        uses: christian-draeger/write-properties@1.0.1
+        with:
+          path: core/gradle.properties
+          property: release_version
+          value: ${{ steps.core_release_ver.outputs.value }}
       - name: Build custom root release version
         id: root_release
         run: echo value="${{ steps.root_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-SNAPSHOT" >> $GITHUB_OUTPUT
+      - name: Write custom release version to root file to prevent publishing release
+        uses: christian-draeger/write-properties@1.0.1
+        with:
+          path: gradle.properties
+          property: release_version
+          value: ${{ steps.root_release.outputs.value }}
       - name: Build custom grpc package version
         id: python_grpc_ver
         run: echo value="${{ steps.grpc_ver.outputs.release_version }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
@@ -63,68 +91,43 @@ jobs:
         run: echo ${{ steps.java_grpc_ver.outputs.value }}
       - name: Show grpc python release version
         run: echo ${{ steps.python_grpc_ver.outputs.value }}
-  build-and-publish-java:
-    name: Build and publish Java distributions
+      - uses: actions/upload-artifact@v3
+        with:
+          name: java-versions
+          retention-days: 1
+          path: |
+            gradle.properties
+            **/gradle.properties
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
     needs:
       - versions
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Build with Gradle
-        run: ./gradlew --info --warning-mode all clean :grpc-read-db:build :grpc-read-db:publish -Prelease_version=${{ needs.versions.outputs.grpc-java }}
-        env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-  build-and-publish-python:
+    uses: ./.github/workflows/build-and-publish-java.yml
+    with:
+      project-path: grpc
+      release: false
+      versions-artifact: java-versions
+    secrets: inherit
+  build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
       - versions
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set version for current build in package_info.json
-        uses: MerthinTechnologies/edit-json-action@v1
-        with:
-          filename: 'grpc/package_info.json'
-          key: 'package_version'
-          value: ${{ needs.versions.outputs.grpc-python }}
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.7
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Build with Gradle
-        run: ./gradlew clean :grpc-read-db:build
-      - name: Build package
-        working-directory: ./grpc
-        run: |
-          pip install -r requirements.txt
-          python setup.py generate -s
-          python setup.py sdist
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
-          repository_url: https://upload.pypi.org/legacy/
-          packages_dir: grpc/dist/
+    uses: ./.github/workflows/build-and-publish-python.yml
+    with:
+      custom-version: ${{ needs.versions.outputs.grpc-python }}
+    secrets: inherit
+  build-and-publish-core-java:
+    name: Build and publish Java core distributions
+    needs:
+      - versions
+    uses: ./.github/workflows/build-and-publish-java.yml
+    with:
+      project-path: core
+      release: false
+      versions-artifact: java-versions
+    secrets: inherit
   publish-docker:
-    name: Bulid docker image
+    name: Build docker image
     runs-on: ubuntu-20.04
     needs:
       - versions
@@ -138,7 +141,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Build with Gradle
-        run: ./gradlew --info --warning-mode all :app:clean :app:build :app:dockerPrepare -Prelease_version=${{ needs.versions.outputs.app }}
+        run: ./gradlew -p app --info --warning-mode all clean build dockerPrepare -Prelease_version=${{ needs.versions.outputs.app }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v2

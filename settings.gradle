@@ -16,5 +16,7 @@ dependencyResolutionManagement {
 }
 
 include 'app'
+include 'core'
 include 'grpc'
 project(':grpc').name = 'grpc-read-db'
+project(':core').name = "read-db-core"

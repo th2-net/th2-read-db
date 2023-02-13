@@ -1,0 +1,95 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+apply from: '../common.gradle'
+apply from: '../publication.gradle'
+
+group 'com.exactpro.th2'
+version release_version
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+ext {
+    coroutines_version = '1.6.4'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "11"
+        freeCompilerArgs += '-opt-in=kotlin.RequiresOptIn'
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}
+
+dependencies {
+    implementation platform('com.exactpro.th2:bom:4.0.2')
+
+    implementation project(':grpc-read-db')
+
+    implementation 'com.exactpro.th2:common:3.42.0'
+    implementation 'org.slf4j:slf4j-api'
+
+    implementation('org.apache.commons:commons-dbcp2:2.9.0') {
+        because('connection pool')
+    }
+    implementation 'org.apache.commons:commons-text:1.9'
+    implementation('com.opencsv:opencsv:5.6') {
+        because('publishes raw messages in csv format')
+    }
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    implementation 'io.github.microutils:kotlin-logging:3.0.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    testImplementation "io.strikt:strikt-core:0.34.1"
+
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.17.3')
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:mysql'
+
+    testRuntimeOnly('mysql:mysql-connector-java:8.0.30') {
+        because('mysql support')
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags('integration-test')
+    }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.register('unitTest', Test) {
+    group = 'verification'
+    useJUnitPlatform {
+        excludeTags('integration-test')
+    }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Created-By': "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
+                'Specification-Title': '',
+                'Specification-Vendor': 'Exactpro Systems LLC',
+                'Implementation-Title': project.archivesBaseName,
+                'Implementation-Vendor': 'Exactpro Systems LLC',
+                'Implementation-Vendor-Id': 'com.exactpro',
+                'Implementation-Version': project.version
+        )
+    }
+}

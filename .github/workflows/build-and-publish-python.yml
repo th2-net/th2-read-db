@@ -1,0 +1,50 @@
+name: Build and publish Python
+
+on:
+  workflow_call:
+    inputs:
+      custom-version:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      PYPI_PASSWORD:
+        required: true
+
+jobs:
+  build-and-publish:
+    name: Build and publish Python distributions to PyPI
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version for current build in package_info.json
+        if: ${{ inputs.custom-version != '' }}
+        uses: MerthinTechnologies/edit-json-action@v1
+        with:
+          filename: 'grpc/package_info.json'
+          key: 'package_version'
+          value: ${{ inputs.custom-version }}
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.7
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      - name: Build with Gradle
+        run: ./gradlew -p grpc clean build
+      - name: Build package
+        working-directory: ./grpc
+        run: |
+          pip install -r requirements.txt
+          python setup.py generate -s
+          python setup.py sdist
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_PASSWORD }}
+          repository_url: https://upload.pypi.org/legacy/
+          packages_dir: grpc/dist/
