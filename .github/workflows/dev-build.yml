@@ -129,7 +129,7 @@ jobs:
   owasp-scan:
     needs:
       - build-and-publish-core-java
-    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@owasp-aggregate
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
   publish-docker:
