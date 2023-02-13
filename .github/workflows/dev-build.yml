@@ -126,6 +126,12 @@ jobs:
       release: false
       versions-artifact: java-versions
     secrets: inherit
+  owasp-scan:
+    needs:
+      - build-and-publish-core-java
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@owasp-aggregate
+    with:
+      multiproject: true
   publish-docker:
     name: Build docker image
     runs-on: ubuntu-20.04
@@ -159,3 +165,13 @@ jobs:
           context: . # project dir
           tags: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app }}
           labels: com.exactpro.th2.${{ steps.meta.outputs.REPOSITORY_NAME }}=${{ needs.versions.outputs.app }}
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - versions
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app }}
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'

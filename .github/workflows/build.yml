@@ -50,15 +50,24 @@ jobs:
     name: Build and publish Java core distributions
     needs:
       - changes
+      - build-and-publish-grpc-java
     if: ${{ needs.changes.outputs.core == 'true' }}
     uses: ./.github/workflows/build-and-publish-java.yml
     with:
       project-path: core
       release: true
     secrets: inherit
+  owasp-scan:
+    needs:
+      - build-and-publish-core-java
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@owasp-aggregate
+    with:
+      multiproject: true
   publish-docker:
     name: Build and publish docker image
     runs-on: ubuntu-20.04
+    outputs:
+      version: ${{ steps.read_property.outputs.release_version }}
     if: |
       always() &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
@@ -100,3 +109,12 @@ jobs:
           context: . # project dir
           tags: ghcr.io/${{ github.repository }}:${{ steps.read_property.outputs.release_version }}
           labels: com.exactpro.th2.${{ steps.meta.outputs.REPOSITORY_NAME }}=${{ steps.read_property.outputs.release_version }}
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.publish-docker.outputs.version }}
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'
