@@ -37,7 +37,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: grpc
-      additionalTasks: '["clean", "build", "publish"]'
+      additionalTasks: '["publish"]'
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
@@ -59,7 +59,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: core
-      additionalTasks: '["clean", "build", "publish"]'
+      additionalTasks: '["publish"]'
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}

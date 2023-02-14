@@ -54,7 +54,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: grpc
-      additionalTasks: '["clean", "build", "publish"]'
+      additionalTasks: '["publish"]'
       versionSuffix: ${{ needs.versions.outputs.version_suffix }}
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
@@ -76,7 +76,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: core
-      additionalTasks: '["clean", "build", "publish"]'
+      additionalTasks: '["publish"]'
       versionSuffix: ${{ needs.versions.outputs.version_suffix }}
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
