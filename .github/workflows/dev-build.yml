@@ -43,7 +43,7 @@ jobs:
           properties: release_version
       - name: Version suffix
         id: suffix
-        run: echo snapshot="${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
+        run: echo "snapshot=${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
       - name: Build custom release version
         id: app_release_ver
         run: echo value="${{ steps.app_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
