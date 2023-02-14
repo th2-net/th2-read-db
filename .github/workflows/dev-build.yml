@@ -101,7 +101,7 @@ jobs:
       versionNumber: ${{ needs.versions.outputs.app-label }}
       dockerContext: '.'
       gradleProjectPath: 'app'
-      gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Prelease_version={0}"]', needs.versions.outputs.app-version) }}
+      gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Pversion_suffix={0}"]', needs.versions.outputs.version-suffix) }}
     secrets:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
@@ -111,6 +111,6 @@ jobs:
       - versions
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app }}
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app-version }}
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
