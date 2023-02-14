@@ -66,10 +66,12 @@ jobs:
     name: Build and publish Python distributions to PyPI
     needs:
       - versions
-    uses: ./.github/workflows/build-and-publish-python.yml
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@python
     with:
       custom-version: ${{ needs.versions.outputs.grpc-python }}
-    secrets: inherit
+      project-path: grpc
+    secrets:
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
   build-and-publish-core-java:
     name: Build and publish Java core distributions
     needs:
