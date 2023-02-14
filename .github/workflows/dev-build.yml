@@ -16,7 +16,7 @@ jobs:
     outputs:
       grpc-python: ${{ steps.python_grpc_ver.outputs.value }}
       app: ${{ steps.app_release_ver.outputs.value }}
-      version_suffix: ${{ steps.suffix.snapshot }}
+      version_suffix: ${{ steps.suffix.outputs.value }}
     steps:
       - uses: actions/checkout@v3
       # Prepare custom build version
@@ -43,7 +43,7 @@ jobs:
           properties: release_version
       - name: Version suffix
         id: suffix
-        run: echo "snapshot=${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
+        run: echo "value=${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
       - name: Build custom release version
         id: app_release_ver
         run: echo value="${{ steps.app_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
