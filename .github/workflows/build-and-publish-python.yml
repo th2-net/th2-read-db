@@ -36,7 +36,7 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew -p grpc clean build
       - name: Build package
-        working-directory: ./grpc
+        working-directory: grpc
         run: |
           pip install -r requirements.txt
           python setup.py generate -s
