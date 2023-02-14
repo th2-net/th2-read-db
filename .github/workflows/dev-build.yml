@@ -14,11 +14,9 @@ jobs:
     name: Collect versions
     runs-on: ubuntu-20.04
     outputs:
-      grpc-java: ${{ steps.java_grpc_ver.outputs.value }}
       grpc-python: ${{ steps.python_grpc_ver.outputs.value }}
       app: ${{ steps.app_release_ver.outputs.value }}
-      core: ${{ steps.core_release_ver.outputs.value }}
-      root: ${{ steps.root_release.outputs.value }}
+      version_suffix: ${{ steps.suffix.value }}
     steps:
       - uses: actions/checkout@v3
       # Prepare custom build version
@@ -34,80 +32,35 @@ jobs:
         with:
           path: grpc/gradle.properties
           properties: release_version
-      - name: Get app release_version
-        id: core_ver
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: core/gradle.properties
-          properties: release_version
+      - name: Build custom grpc package version
+        id: python_grpc_ver
+        run: echo value="${{ steps.grpc_ver.outputs.release_version }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
       - name: Get app release_version
         id: app_ver
         uses: christian-draeger/read-properties@1.1.1
         with:
           path: app/gradle.properties
           properties: release_version
-      - name: Get root release_version
-        id: root_ver
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: gradle.properties
-          properties: release_version
+      - name: Version suffix
+        id: suffix
+        run: echo value="${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
       - name: Build custom release version
         id: app_release_ver
         run: echo value="${{ steps.app_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
-      - name: Build custom grpc release version for java
-        id: java_grpc_ver
-        run: echo value="${{ steps.grpc_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
-      - name: Write custom release version to gRPC java
-        uses: christian-draeger/write-properties@1.0.1
-        with:
-          path: grpc/gradle.properties
-          property: release_version
-          value: ${{ steps.java_grpc_ver.outputs.value }}
-      - name: Build custom core release version for java
-        id: core_release_ver
-        run: echo value="${{ steps.core_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
-      - name: Write custom release version to core java
-        uses: christian-draeger/write-properties@1.0.1
-        with:
-          path: core/gradle.properties
-          property: release_version
-          value: ${{ steps.core_release_ver.outputs.value }}
-      - name: Build custom root release version
-        id: root_release
-        run: echo value="${{ steps.root_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-SNAPSHOT" >> $GITHUB_OUTPUT
-      - name: Write custom release version to root file to prevent publishing release
-        uses: christian-draeger/write-properties@1.0.1
-        with:
-          path: gradle.properties
-          property: release_version
-          value: ${{ steps.root_release.outputs.value }}
-      - name: Build custom grpc package version
-        id: python_grpc_ver
-        run: echo value="${{ steps.grpc_ver.outputs.release_version }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
-      - name: Show app release version
-        run: echo ${{ steps.app_release_ver.outputs.value }}
-      - name: Show grpc java release version
-        run: echo ${{ steps.java_grpc_ver.outputs.value }}
-      - name: Show grpc python release version
-        run: echo ${{ steps.python_grpc_ver.outputs.value }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: java-versions
-          retention-days: 1
-          path: |
-            gradle.properties
-            **/gradle.properties
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
     needs:
       - versions
-    uses: ./.github/workflows/build-and-publish-java.yml
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
-      project-path: grpc
-      release: false
-      versions-artifact: java-versions
-    secrets: inherit
+      projectPath: grpc
+      additionalTasks: '["clean", "build", "publish"]'
+      versionSuffix: ${{ needs.versions.outputs.version_suffix }}
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
@@ -120,12 +73,16 @@ jobs:
     name: Build and publish Java core distributions
     needs:
       - versions
-    uses: ./.github/workflows/build-and-publish-java.yml
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
-      project-path: core
-      release: false
-      versions-artifact: java-versions
-    secrets: inherit
+      projectPath: core
+      additionalTasks: '["clean", "build", "publish"]'
+      versionSuffix: ${{ needs.versions.outputs.version_suffix }}
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
     needs:
       - build-and-publish-core-java

@@ -6,9 +6,6 @@ plugins {
 
 apply from: '../common.gradle'
 
-group 'com.exactpro.th2'
-version release_version
-
 sourceCompatibility = 11
 targetCompatibility = 11
 

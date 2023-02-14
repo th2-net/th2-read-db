@@ -34,11 +34,15 @@ jobs:
     needs:
       - changes
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    uses: ./.github/workflows/build-and-publish-java.yml
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
-      project-path: grpc
-      release: true
-    secrets: inherit
+      projectPath: grpc
+      additionalTasks: '["clean", "build", "publish"]'
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
@@ -52,11 +56,15 @@ jobs:
       - changes
       - build-and-publish-grpc-java
     if: ${{ needs.changes.outputs.core == 'true' }}
-    uses: ./.github/workflows/build-and-publish-java.yml
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
-      project-path: core
-      release: true
-    secrets: inherit
+      projectPath: core
+      additionalTasks: '["clean", "build", "publish"]'
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
     needs:
       - build-and-publish-core-java

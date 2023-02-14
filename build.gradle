@@ -4,8 +4,14 @@ plugins {
     id "org.owasp.dependencycheck" version "8.0.2"
 }
 
-group = 'com.exactpro.th2'
-version = release_version
+allprojects {
+    group = 'com.exactpro.th2'
+    version = release_version
+    String suffix = property('version_suffix').toString()
+    if (!suffix.isEmpty()) {
+        version = "$version-$suffix"
+    }
+}
 
 nexusPublishing {
     repositories {
