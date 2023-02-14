@@ -11,6 +11,19 @@ on:
       - core/gradle.properties
 
 jobs:
+  versions:
+    name: Extract app version
+    runs-on: ubuntu-20.04
+    outputs:
+      app-version: ${{ steps.read_property.outputs.release_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Read version from gradle.properties
+        id: read_property
+        uses: christian-draeger/read-properties@1.1.1
+        with:
+          path: app/gradle.properties
+          properties: release_version
   changes:
     name: Collect changed files
     runs-on: ubuntu-20.04
@@ -73,9 +86,6 @@ jobs:
       multiproject: true
   publish-docker:
     name: Build and publish docker image
-    runs-on: ubuntu-20.04
-    outputs:
-      version: ${{ steps.read_property.outputs.release_version }}
     if: |
       always() &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
@@ -83,46 +93,24 @@ jobs:
       - build-and-publish-grpc-python
       - build-and-publish-grpc-java
       - build-and-publish-core-java
-    steps:
-      - uses: actions/checkout@v3
-      - name: Read version from gradle.properties
-        id: read_property
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: app/gradle.properties
-          properties: release_version
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Build with Gradle
-        run: ./gradlew -p app --info --warning-mode all clean build dockerPrepare
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
-        id: meta
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: . # project dir
-          tags: ghcr.io/${{ github.repository }}:${{ steps.read_property.outputs.release_version }}
-          labels: com.exactpro.th2.${{ steps.meta.outputs.REPOSITORY_NAME }}=${{ steps.read_property.outputs.release_version }}
+      - versions
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@docker-gradle
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.versions.outputs.app-version }}
+      versionNumber: ${{ needs.versions.outputs.app-version }}
+      dockerContext: '.'
+      gradleProjectPath: 'app'
+      gradleParameters: '["clean", "build", "dockerPrepare"]'
+    secrets:
+      docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
     needs:
       - publish-docker
+      - versions
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.publish-docker.outputs.version }}
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app-version }}
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
