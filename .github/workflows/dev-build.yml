@@ -12,17 +12,17 @@ on:
 jobs:
   grpc-version:
     name: Collect grpc version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@pre-build-project
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
     with:
       project-path: grpc
   app-version:
     name: Collect app version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@pre-build-project
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
     with:
       project-path: app
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: grpc
       additionalTasks: '["publish"]'
@@ -44,7 +44,7 @@ jobs:
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
   build-and-publish-core-java:
     name: Build and publish Java core distributions
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: core
       additionalTasks: '["publish"]'
@@ -64,7 +64,7 @@ jobs:
     name: Build docker image
     needs:
       - app-version
-    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@docker-gradle
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
       version: ${{ needs.app-version.outputs.version }}

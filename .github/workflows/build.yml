@@ -13,7 +13,7 @@ on:
 jobs:
   versions:
     name: Extract app version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@pre-build-project
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
       project-path: app
   changes:
@@ -39,7 +39,7 @@ jobs:
     needs:
       - changes
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: grpc
       release: true
@@ -65,7 +65,7 @@ jobs:
       - changes
       - build-and-publish-grpc-java
     if: ${{ needs.changes.outputs.core == 'true' }}
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: core
       release: true
@@ -91,7 +91,7 @@ jobs:
       - build-and-publish-grpc-java
       - build-and-publish-core-java
       - versions
-    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@docker-gradle
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
       version: ${{ needs.versions.outputs.version }}
