@@ -1,0 +1,10 @@
+dependencies {
+    implementation platform('com.exactpro.th2:bom:4.1.0')
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
+}

@@ -8,14 +8,21 @@ on:
     paths:
       - app/gradle.properties
       - grpc/gradle.properties
+      - core/gradle.properties
 
 jobs:
+  versions:
+    name: Extract app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: app
   changes:
     name: Collect changed files
     runs-on: ubuntu-20.04
     outputs:
       app: ${{ steps.filter.outputs.app }}
       grpc: ${{ steps.filter.outputs.grpc }}
+      core: ${{ steps.filter.outputs.core }}
     steps:
       - uses: dorny/paths-filter@v2
         id: filter
@@ -25,102 +32,82 @@ jobs:
               - 'app/gradle.properties'
             grpc:
               - 'grpc/gradle.properties'
-  build-and-publish-java:
-    name: Build and publish Java distributions
+            core:
+              - 'core/gradle.properties'
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
     needs:
       - changes
-    runs-on: ubuntu-20.04
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Build with Gradle
-        run: ./gradlew --info --warning-mode all clean :grpc-read-db:build :grpc-read-db:publish closeAndReleaseSonatypeStagingRepository
-        env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-  build-and-publish-python:
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    with:
+      projectPath: grpc
+      release: true
+      additionalTasks: '["publish"]'
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
       - changes
-    runs-on: ubuntu-20.04
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.7
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Build with Gradle
-        run: ./gradlew clean :grpc-read-db:build
-      - name: Build package
-        working-directory: ./grpc
-        run: |
-          pip install -r requirements.txt
-          python setup.py generate -s
-          python setup.py sdist
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
-          repository_url: https://upload.pypi.org/legacy/
-          packages_dir: grpc/dist/
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
+    with:
+      project-path: grpc
+    secrets:
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+  build-and-publish-core-java:
+    name: Build and publish Java core distributions
+    needs:
+      - changes
+      - build-and-publish-grpc-java
+    if: ${{ needs.changes.outputs.core == 'true' }}
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    with:
+      projectPath: core
+      release: true
+      additionalTasks: '["publish"]'
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  owasp-scan:
+    needs:
+      - build-and-publish-core-java
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
+    with:
+      multiproject: true
   publish-docker:
     name: Build and publish docker image
-    runs-on: ubuntu-20.04
     if: |
       always() &&
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true')
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
     needs:
-      - build-and-publish-python
-      - build-and-publish-java
-    steps:
-      - uses: actions/checkout@v3
-      - name: Read version from gradle.properties
-        id: read_property
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: .app/gradle.properties
-          properties: release_version
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Build with Gradle
-        run: ./gradlew --info --warning-mode all :app:clean :app:build :app:dockerPrepare
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
-        id: meta
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          context: . # project dir
-          tags: ghcr.io/${{ github.repository }}:${{ steps.read_property.outputs.release_version }}
-          labels: com.exactpro.th2.${{ steps.meta.outputs.REPOSITORY_NAME }}=${{ steps.read_property.outputs.release_version }}
+      - build-and-publish-grpc-python
+      - build-and-publish-grpc-java
+      - build-and-publish-core-java
+      - versions
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.versions.outputs.version }}
+      versionNumber: ${{ needs.versions.outputs.version }}
+      dockerContext: '.'
+      gradleProjectPath: 'app'
+      gradleParameters: '["clean", "build", "dockerPrepare"]'
+    secrets:
+      docker-password: ${{ secrets.GITHUB_TOKEN }}
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - versions
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.version }}
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'
