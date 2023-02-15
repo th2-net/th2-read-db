@@ -13,17 +13,9 @@ on:
 jobs:
   versions:
     name: Extract app version
-    runs-on: ubuntu-20.04
-    outputs:
-      app-version: ${{ steps.read_property.outputs.release_version }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Read version from gradle.properties
-        id: read_property
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: app/gradle.properties
-          properties: release_version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@pre-build-project
+    with:
+      project-path: app
   changes:
     name: Collect changed files
     runs-on: ubuntu-20.04
@@ -102,8 +94,8 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@docker-gradle
     with:
       docker-username: ${{ github.actor }}
-      version: ${{ needs.versions.outputs.app-version }}
-      versionNumber: ${{ needs.versions.outputs.app-version }}
+      version: ${{ needs.versions.outputs.version }}
+      versionNumber: ${{ needs.versions.outputs.version }}
       dockerContext: '.'
       gradleProjectPath: 'app'
       gradleParameters: '["clean", "build", "dockerPrepare"]'
@@ -116,6 +108,6 @@ jobs:
       - versions
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app-version }}
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.version }}
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'

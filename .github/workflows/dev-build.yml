@@ -10,48 +10,18 @@ on:
       - LICENSE
       - .gitignore
 jobs:
-  versions:
-    name: Collect versions
-    runs-on: ubuntu-20.04
-    outputs:
-      grpc-python: ${{ steps.python_grpc_ver.outputs.value }}
-      app-version: ${{ steps.app_release_ver.outputs.value }}
-      app-label: ${{ steps.app_ver.outputs.release_version }}
-      version-suffix: ${{ steps.suffix.outputs.value }}
-    steps:
-      - uses: actions/checkout@v3
-      # Prepare custom build version
-      - name: Get branch name
-        id: branch
-        run: echo "branch_name=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Get SHA of the commit
-        id: sha
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get grpc release_version
-        id: grpc_ver
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: grpc/gradle.properties
-          properties: release_version
-      - name: Build custom grpc package version
-        id: python_grpc_ver
-        run: echo value="${{ steps.grpc_ver.outputs.release_version }}.dev${{ github.run_id }}" >> $GITHUB_OUTPUT
-      - name: Get app release_version
-        id: app_ver
-        uses: christian-draeger/read-properties@1.1.1
-        with:
-          path: app/gradle.properties
-          properties: release_version
-      - name: Version suffix
-        id: suffix
-        run: echo "value=${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
-      - name: Build custom release version
-        id: app_release_ver
-        run: echo value="${{ steps.app_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
+  grpc-version:
+    name: Collect grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@pre-build-project
+    with:
+      project-path: grpc
+  app-version:
+    name: Collect app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@pre-build-project
+    with:
+      project-path: app
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
-    needs:
-      - versions
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: grpc
@@ -65,17 +35,15 @@ jobs:
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
-      - versions
+      - grpc-version
     uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@python
     with:
-      custom-version: ${{ needs.versions.outputs.grpc-python }}
+      custom-version: ${{ needs.grpc-version.outputs.versionNumber }}.dev${{ github.run_id }}
       project-path: grpc
     secrets:
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
   build-and-publish-core-java:
     name: Build and publish Java core distributions
-    needs:
-      - versions
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@multi-project-workflows
     with:
       projectPath: core
@@ -95,24 +63,24 @@ jobs:
   publish-docker:
     name: Build docker image
     needs:
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@docker-gradle
     with:
       docker-username: ${{ github.actor }}
-      version: ${{ needs.versions.outputs.app-version }}
-      versionNumber: ${{ needs.versions.outputs.app-label }}
+      version: ${{ needs.app-version.outputs.version }}
+      versionNumber: ${{ needs.app-version.outputs.versionNumber }}
       dockerContext: '.'
       gradleProjectPath: 'app'
-      gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Pversion_suffix={0}"]', needs.versions.outputs.version-suffix) }}
+      gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Pversion_suffix={0}"]', needs.app-version.outputs.versionSuffix) }}
     secrets:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
     needs:
       - publish-docker
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.app-version }}
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
