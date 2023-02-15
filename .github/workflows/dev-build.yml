@@ -44,7 +44,7 @@ jobs:
           properties: release_version
       - name: Version suffix
         id: suffix
-        run: echo "value=${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
+        run: echo "value=${{ steps.branch.outputs.branch_name }}-${{ steps.sha.outputs.sha_short }}-SNAPSHOT" >> $GITHUB_OUTPUT
       - name: Build custom release version
         id: app_release_ver
         run: echo value="${{ steps.app_ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
@@ -56,7 +56,7 @@ jobs:
     with:
       projectPath: grpc
       additionalTasks: '["publish"]'
-      versionSuffix: ${{ needs.versions.outputs.version-suffix }}
+      release: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
@@ -80,7 +80,7 @@ jobs:
     with:
       projectPath: core
       additionalTasks: '["publish"]'
-      versionSuffix: ${{ needs.versions.outputs.version-suffix }}
+      release: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
