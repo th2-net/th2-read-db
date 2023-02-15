@@ -21,7 +21,7 @@ dependencies {
     runtimeOnly('org.postgresql:postgresql:42.4.1') {
         because('prostresql support')
     }
-    runtimeOnly('mysql:mysql-connector-java:8.0.30') {
+    runtimeOnly('com.mysql:mysql-connector-j:8.0.32') {
         because('mysql support')
     }
     runtimeOnly('com.oracle.database.jdbc:ojdbc11:21.6.0.0.1') {
