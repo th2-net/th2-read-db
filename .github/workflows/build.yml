@@ -54,7 +54,7 @@ jobs:
     needs:
       - changes
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@python
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
     with:
       project-path: grpc
     secrets:
