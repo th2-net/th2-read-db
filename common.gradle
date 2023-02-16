@@ -1,5 +1,5 @@
 dependencies {
-    implementation platform('com.exactpro.th2:bom:4.1.0')
+    implementation platform('com.exactpro.th2:bom:4.2.0')
 }
 
 test {
