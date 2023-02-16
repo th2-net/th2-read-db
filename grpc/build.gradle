@@ -15,7 +15,7 @@ targetCompatibility = 11
 ext {
     grpcVersion         = '1.48.1'
     protobufVersion     = '3.13.0'
-    serviceGeneratorVersion = '3.2.2'
+    serviceGeneratorVersion = '3.3.0-th2-4347-vulnerabilities-fix-4191509778-1fc84f0-SNAPSHOT'
     genBaseDir = file("${buildDir}/generated/source/proto") // from protobuf plugin
 }
 
