@@ -1,9 +1,17 @@
 plugins {
     id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
+    id 'org.jetbrains.kotlin.jvm' version '1.6.21' apply false
+    id "org.owasp.dependencycheck" version "8.0.2"
 }
 
-group = 'com.exactpro.th2'
-version = release_version
+allprojects {
+    group = 'com.exactpro.th2'
+    version = release_version
+    String suffix = property('version_suffix').toString()
+    if (!suffix.isEmpty()) {
+        version = "$version-$suffix"
+    }
+}
 
 nexusPublishing {
     repositories {
@@ -15,3 +23,12 @@ nexusPublishing {
 }
 
 tasks.withType(PublishToMavenRepository).configureEach { it.enabled = false }
+
+dependencyCheck {
+    skipProjects = [':app']
+    formats = ['SARIF']
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}
