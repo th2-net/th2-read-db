@@ -27,7 +27,7 @@ configurations.configureEach {
 dependencies {
     implementation project(':grpc-read-db')
 
-    implementation 'com.exactpro.th2:common:3.44.0'
+    implementation 'com.exactpro.th2:common:5.2.0-dev'
     implementation 'org.slf4j:slf4j-api'
 
     implementation('org.apache.commons:commons-dbcp2:2.9.0') {
