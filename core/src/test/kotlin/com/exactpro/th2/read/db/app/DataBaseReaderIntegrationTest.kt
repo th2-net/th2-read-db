@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
@@ -105,7 +104,8 @@ internal class DataBaseReaderIntegrationTest {
                                 "birthday" to listOf("1996-10-31")
                             )
                         )
-                    )
+                    ),
+                    sessionGroup = "session_group_1"
                 ),
                 this,
                 genericUpdateListener,
@@ -150,7 +150,8 @@ internal class DataBaseReaderIntegrationTest {
                         QueryId("updates") to QueryConfiguration(
                             "SELECT * FROM test_data.person WHERE id > \${id:integer}"
                         )
-                    )
+                    ),
+                    sessionGroup = "session_group_1"
                 ),
                 this,
                 genericUpdateListener,

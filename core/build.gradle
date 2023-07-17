@@ -27,30 +27,32 @@ configurations.configureEach {
 dependencies {
     implementation project(':grpc-read-db')
 
-    implementation 'com.exactpro.th2:common:5.2.0-dev'
-    implementation 'org.slf4j:slf4j-api'
+    api platform('com.exactpro.th2:bom:4.4.0-update-libs-5345334944-c71fdc9-SNAPSHOT')
+    implementation "com.exactpro.th2:common:5.3.0-separate-executor-5391854885-afab720-SNAPSHOT"
+    implementation "org.slf4j:slf4j-api"
 
     implementation('org.apache.commons:commons-dbcp2:2.9.0') {
         because('connection pool')
     }
-    implementation 'org.apache.commons:commons-text:1.9'
-    implementation('com.opencsv:opencsv:5.6') {
+    implementation "org.apache.commons:commons-text"
+    implementation('com.opencsv:opencsv:5.7.1') {
         because('publishes raw messages in csv format')
     }
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
-    implementation 'io.github.microutils:kotlin-logging:3.0.0'
+    implementation "io.github.microutils:kotlin-logging:3.0.0"
+    implementation "com.fasterxml.jackson.core:jackson-databind"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     testImplementation "io.strikt:strikt-core:0.34.1"
 
-    testImplementation platform('org.testcontainers:testcontainers-bom:1.17.3')
-    testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:mysql'
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.18.3')
+    testImplementation "org.testcontainers:testcontainers"
+    testImplementation "org.testcontainers:mysql"
 
-    testRuntimeOnly('mysql:mysql-connector-java:8.0.30') {
+    testRuntimeOnly('mysql:mysql-connector-java:8.0.33') {
         because('mysql support')
     }
 }
