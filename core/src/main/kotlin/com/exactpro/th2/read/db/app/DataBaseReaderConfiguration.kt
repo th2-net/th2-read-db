@@ -29,8 +29,7 @@ class DataBaseReaderConfiguration(
     val queries: Map<QueryId, QueryConfiguration>,
     val startupTasks: List<StartupTaskConfiguration> = emptyList(),
     val publication: PublicationConfiguration = PublicationConfiguration(),
-    val useTransport: Boolean = false,
-    val sessionGroup: String
+    val useTransport: Boolean = false
 )
 
 class PublicationConfiguration(

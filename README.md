@@ -1,4 +1,5 @@
-# th2-read-db
+# th2-read-db 0.1.0
+
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
 # Configuration
@@ -150,6 +151,7 @@ spec:
       queueSize: 1000
       maxDelayMillis: 1000
       maxBatchSize: 100
+    useTransport: true
   pins:
     - name: server
       connection-type: grpc-server
@@ -158,7 +160,7 @@ spec:
         - th2.read_db.ReadDbService
     - name: store
       connection-type: mq
-      attributes: ['raw', 'publish', 'store']
+      attributes: ['transport-group', 'publish', 'store']
   extended-settings:
     service:
       enabled: false
@@ -172,3 +174,9 @@ spec:
         memory: 100Mi
         cpu: 50m
 ```
+
+## Changes
+
+### 0.1.0
+
++ Added support for th2 transport protocol

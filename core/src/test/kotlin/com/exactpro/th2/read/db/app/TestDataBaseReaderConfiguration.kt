@@ -112,8 +112,7 @@ internal class TestDataBaseReaderConfiguration {
                   },
                   "interval": 1000
                 }
-              ],
-              "sessionGroup": "session_group_1"
+              ]
             }
         """.trimIndent(), DataBaseReaderConfiguration::class.java)
 

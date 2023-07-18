@@ -104,8 +104,7 @@ internal class DataBaseReaderIntegrationTest {
                                 "birthday" to listOf("1996-10-31")
                             )
                         )
-                    ),
-                    sessionGroup = "session_group_1"
+                    )
                 ),
                 this,
                 genericUpdateListener,
@@ -150,8 +149,7 @@ internal class DataBaseReaderIntegrationTest {
                         QueryId("updates") to QueryConfiguration(
                             "SELECT * FROM test_data.person WHERE id > \${id:integer}"
                         )
-                    ),
-                    sessionGroup = "session_group_1"
+                    )
                 ),
                 this,
                 genericUpdateListener,
