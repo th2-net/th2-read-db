@@ -56,6 +56,9 @@ The list of data sources where the read-db can connect.
 + password - the password that should be used when connecting to database. Skip if other types of authentication should be used
 + parameters - the list of parameters with their values that must be used when connecting to database. They are specific for each database
 
+You can set the book name per each data source. Use parameter **bookName** to specify the book.
+By default, the book associated with the component will be used
+
 ### queries
 
 The list of queries that can be executed by read-db.
