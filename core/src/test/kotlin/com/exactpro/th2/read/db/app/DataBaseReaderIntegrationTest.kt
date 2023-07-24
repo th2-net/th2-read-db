@@ -95,7 +95,7 @@ internal class DataBaseReaderIntegrationTest {
                             mysql.jdbcUrl,
                             mysql.username,
                             mysql.password,
-                        )
+                        ).wrap()
                     ),
                     mapOf(
                         QueryId("all") to QueryConfiguration(
@@ -140,7 +140,7 @@ internal class DataBaseReaderIntegrationTest {
                             mysql.jdbcUrl,
                             mysql.username,
                             mysql.password,
-                        )
+                        ).wrap()
                     ),
                     mapOf(
                         QueryId("current_state") to QueryConfiguration(
@@ -261,6 +261,10 @@ internal class DataBaseReaderIntegrationTest {
             prepareStatement.addBatch()
         }
         prepareStatement.executeBatch()
+    }
+
+    private fun DataSourceConfiguration.wrap(): DataSourceParameters = DataSourceParameters().apply {
+        sourceConfiguration = this@wrap
     }
 
     companion object {

@@ -20,6 +20,7 @@ package com.exactpro.th2.read.db.bootstrap
 import com.exactpro.th2.common.grpc.Direction as ProtoDirection
 import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
 import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
+import com.exactpro.th2.common.message.bookName
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
@@ -36,6 +37,7 @@ import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
 import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
+import com.exactpro.th2.read.db.app.DataSourceParameters
 import com.exactpro.th2.read.db.app.validate
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.TableRow
@@ -128,18 +130,22 @@ internal fun setupApp(
 
     val appScope = createScope(closeResource)
     val componentBookName = factory.boxConfiguration.bookName
+    val sourcesConfiguration: Map<DataSourceId, DataSourceParameters> = cfg.dataSources
+    fun overrideBookFor(alias: String): String? {
+        return sourcesConfiguration[DataSourceId(alias)]?.bookName
+    }
     val reader = if (cfg.useTransport) {
         val messageRouter: MessageRouter<GroupBatch> = factory.transportGroupBatchRouter
         val messageQueue: BlockingQueue<RawMessage.Builder> = configureTransportMessageStoring(
             cfg,
             ::transportKeyExtractor,
-            TransportPreprocessor(componentBookName),
+            TransportPreprocessor,
             closeResource
         ) {
             val sessionAlias = it[0].idBuilder().sessionAlias
             messageRouter.sendAll(
                 GroupBatch(
-                    componentBookName,
+                    overrideBookFor(sessionAlias) ?: componentBookName,
                     sessionAlias,
                     it.map {  builder -> builder.build().toGroup() }
                 ),
@@ -154,12 +160,18 @@ internal fun setupApp(
             ::protoKeyExtractor,
             ProtoPreprocessor(componentBookName),
             closeResource
-        ) {
+        ) { messages ->
+            val sessionAlias: String = messages.first().sessionAlias
+            val bookToOverride: String? = overrideBookFor(sessionAlias)
             messageRouter.sendAll(
                 ProtoMessageGroupBatch.newBuilder()
                     .apply {
-                        it.forEach {
-                            addGroupsBuilder() += it
+                        messages.forEach {
+                            addGroupsBuilder() += it.apply {
+                                if (bookToOverride != null) {
+                                    bookName = bookToOverride
+                                }
+                            }
                         }
                     }
                     .build(),
@@ -334,13 +346,18 @@ private fun protoKeyExtractor(builder: ProtoRawMessage.Builder): SessionKey<Prot
 private fun transportKeyExtractor(builder: RawMessage.Builder): SessionKey<Direction> =
     SessionKey(builder.idBuilder().sessionAlias, builder.idBuilder().direction)
 
-private abstract class Preprocessor<BUILDER, DIRECTION>(protected val configBookName: String) {
+private abstract class Preprocessor<BUILDER, DIRECTION>() {
     protected val sequences = ConcurrentHashMap<SessionKey<DIRECTION>, Long>()
     abstract fun preprocess(key: SessionKey<DIRECTION>, builder: BUILDER): BUILDER
 }
 
-private class ProtoPreprocessor(bookName: String) : Preprocessor<ProtoRawMessage.Builder, ProtoDirection>(bookName) {
-    override fun preprocess(key: SessionKey<ProtoDirection>, builder: ProtoRawMessage.Builder): ProtoRawMessage.Builder =
+private class ProtoPreprocessor(
+    private val configBookName: String,
+) : Preprocessor<ProtoRawMessage.Builder, ProtoDirection>() {
+    override fun preprocess(
+        key: SessionKey<ProtoDirection>,
+        builder: ProtoRawMessage.Builder
+    ): ProtoRawMessage.Builder =
         builder.apply {
             sequence = sequences.compute(key) { _, prev ->
                 if (prev == null) {
@@ -357,7 +374,7 @@ private class ProtoPreprocessor(bookName: String) : Preprocessor<ProtoRawMessage
         }
 }
 
-private class TransportPreprocessor(bookName: String) : Preprocessor<RawMessage.Builder, Direction>(bookName) {
+private object TransportPreprocessor : Preprocessor<RawMessage.Builder, Direction>() {
     override fun preprocess(key: SessionKey<Direction>, builder: RawMessage.Builder): RawMessage.Builder {
         builder.idBuilder().apply {
             setSequence(requireNotNull(

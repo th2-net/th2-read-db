@@ -23,14 +23,21 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 
 class DataBaseReaderConfiguration(
-    val dataSources: Map<DataSourceId, DataSourceConfiguration>,
+    val dataSources: Map<DataSourceId, DataSourceParameters>,
     val queries: Map<QueryId, QueryConfiguration>,
     val startupTasks: List<StartupTaskConfiguration> = emptyList(),
     val publication: PublicationConfiguration = PublicationConfiguration(),
     val useTransport: Boolean = false
 )
+
+class DataSourceParameters {
+    @field:JsonUnwrapped
+    lateinit var sourceConfiguration: DataSourceConfiguration
+    var bookName: String? = null
+}
 
 class PublicationConfiguration(
     val queueSize: Int = 1000,

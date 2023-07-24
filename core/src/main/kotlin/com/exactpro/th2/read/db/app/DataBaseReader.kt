@@ -180,7 +180,8 @@ class DataBaseReader(
             pullingListener: UpdateListener,
             rowListener: RowListener,
         ): DataBaseReader {
-            val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
+            val sourceProvider: DataSourceProvider =
+                BaseDataSourceProvider(configuration.dataSources.mapValues { it.value.sourceConfiguration })
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
             val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider)
             val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService)

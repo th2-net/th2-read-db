@@ -29,9 +29,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import strikt.api.expectThat
 import strikt.assertions.filterIsInstance
+import strikt.assertions.getValue
 import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
 import strikt.assertions.single
 import java.io.InputStream
 import java.nio.file.Path
@@ -79,6 +81,15 @@ internal class TestDataBaseReaderConfiguration {
                   "properties": {
                     "prop1": "value1"
                   }
+                },
+                "testWithBook": {
+                  "url": "test.url",
+                  "username": "user",
+                  "password": "pwd",
+                  "properties": {
+                    "prop1": "value1"
+                  },
+                  "bookName": "testBook"
                 }
               },
               "queries": {
@@ -120,17 +131,36 @@ internal class TestDataBaseReaderConfiguration {
         val queryId = QueryId("test_query")
         expectThat(cfg) {
             get { dataSources }
-                .hasSize(1)
-                .hasEntry(
-                    dataSource, DataSourceConfiguration(
-                        "test.url",
-                        "user",
-                        "pwd",
-                        mapOf(
-                            "prop1" to "value1"
-                        )
-                    )
-                )
+                .hasSize(2).apply {
+                    getValue(dataSource).apply {
+                        get { sourceConfiguration }
+                            .isEqualTo(
+                                DataSourceConfiguration(
+                                    "test.url",
+                                    "user",
+                                    "pwd",
+                                    mapOf(
+                                        "prop1" to "value1"
+                                    )
+                                )
+                            )
+                        get { bookName }.isNull()
+                    }
+                    getValue(DataSourceId("testWithBook")).apply {
+                        get { sourceConfiguration }
+                            .isEqualTo(
+                                DataSourceConfiguration(
+                                    "test.url",
+                                    "user",
+                                    "pwd",
+                                    mapOf(
+                                        "prop1" to "value1"
+                                    )
+                                )
+                            )
+                        get { bookName } isEqualTo "testBook"
+                    }
+                }
             get { queries }.hasSize(1)
                 .hasEntry(
                     queryId, QueryConfiguration(
