@@ -3,7 +3,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'signing'
-    id "com.google.protobuf" version "0.9.2"
+    id "com.google.protobuf" version "0.9.3"
 }
 
 apply from: '../common.gradle'
@@ -13,9 +13,9 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 ext {
-    grpcVersion         = '1.48.1'
-    protobufVersion     = '3.21.12'
-    serviceGeneratorVersion = '3.3.0'
+    grpcVersion         = '1.56.0'
+    protobufVersion     = '3.23.2' // The protoc:3.23.3 https://github.com/protocolbuffers/protobuf/issues/13070
+    serviceGeneratorVersion = '3.4.0'
     genBaseDir = file("${buildDir}/generated/source/proto") // from protobuf plugin
 }
 

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id "org.jetbrains.kotlin.jvm"
 }
@@ -12,7 +14,7 @@ ext {
     coroutines_version = '1.6.4'
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = "11"
         freeCompilerArgs += '-opt-in=kotlin.RequiresOptIn'
@@ -27,9 +29,9 @@ configurations.configureEach {
 dependencies {
     implementation project(":grpc-read-db")
 
-    api platform("com.exactpro.th2:bom:4.4.0")
-    implementation "com.exactpro.th2:common:5.3.0-separate-executor-5712647407-cd52dd9-SNAPSHOT"
-    implementation "com.exactpro.th2:common-utils:2.1.0-transport-protocol-5599170164-aa085e1-SNAPSHOT"
+    api platform("com.exactpro.th2:bom:4.5.0")
+    implementation "com.exactpro.th2:common:5.4.0-dev"
+    implementation "com.exactpro.th2:common-utils:2.2.0-dev"
     implementation "org.slf4j:slf4j-api"
 
     implementation("org.apache.commons:commons-dbcp2:2.9.0") {
@@ -41,10 +43,10 @@ dependencies {
     }
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
-    implementation "io.github.microutils:kotlin-logging:3.0.0"
+    implementation "io.github.microutils:kotlin-logging:3.0.5"
     implementation "com.fasterxml.jackson.core:jackson-databind"
 
-    testImplementation "org.junit.jupiter:junit-jupiter:5.9.3"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     testImplementation "io.strikt:strikt-core:0.34.1"
@@ -53,7 +55,7 @@ dependencies {
     testImplementation "org.testcontainers:testcontainers"
     testImplementation "org.testcontainers:mysql"
 
-    testRuntimeOnly("mysql:mysql-connector-java:8.1.0") {
+    testRuntimeOnly("com.mysql:mysql-connector-j:8.1.0") {
         because("mysql support")
     }
 }
