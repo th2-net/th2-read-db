@@ -11,7 +11,7 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 ext {
-    coroutines_version = '1.6.4'
+    coroutines_version = '1.7.3'
 }
 
 tasks.withType(KotlinCompile).configureEach {
@@ -48,7 +48,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
-    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:5.1.0"
     testImplementation "io.strikt:strikt-core:0.34.1"
 
     testImplementation platform("org.testcontainers:testcontainers-bom:1.19.0")

@@ -26,12 +26,12 @@ import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.times
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.verifyZeroInteractions
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
@@ -123,7 +123,7 @@ internal class DataBaseReaderIntegrationTest {
 
             genericRowListener.assertCaptured(persons)
             listener.assertCaptured(persons)
-            verifyZeroInteractions(genericUpdateListener)
+            verifyNoInteractions(genericUpdateListener)
         }
     }
 
@@ -179,7 +179,7 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(newData)
             listener.assertCaptured(newData)
-            verifyZeroInteractions(genericRowListener)
+            verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 
             advanceUntilIdle()

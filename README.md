@@ -1,4 +1,4 @@
-# th2-read-db 0.1.0
+# th2-read-db 0.3.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -177,6 +177,10 @@ spec:
 
 ## Changes
 
-### 0.1.0
+### 0.3.0
+
++ MSSQL support added
+
+### 0.2.0
 
 + Added support for th2 transport protocol

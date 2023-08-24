@@ -1,4 +1,4 @@
-name: Build and release Java distributions to sonatype.
+name: Build and publish Docker distributions to Github Container Registry ghcr.io
 
 on:
   push:
@@ -6,17 +6,69 @@ on:
       - \d+.\d+.\d+-dev
 
 jobs:
-  build:
-    uses: th2-net/.github/.github/workflows/compound-java.yml@main
+  versions:
+    name: Extract app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 'zulu' '11'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew --info -Pversion_suffix='dev' clean build publish closeAndReleaseSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+
+  build-and-publish-grpc-python:
+    name: Build and publish Python distributions to PyPI
+    needs:
+      - build-and-publish-grpc-java
+      - versions
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
     with:
-      build-target: 'Sonatype,Docker'
-      runsOn: ubuntu-latest
-      gradleVersion: '7'
-      docker-username: ${{ github.actor }}
-      devRelease: true
+      custom-version: ${{ needs.versions.outputs.version }}-dev
+      project-path: grpc
     secrets:
-      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
-      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
-      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
-      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+
+  owasp-scan:
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
+    with:
+      multiproject: true
+
+  publish-docker:
+    name: Build and publish docker image
+    needs:
+      - build-and-publish-grpc-python
+      - build-and-publish-grpc-java
+      - versions
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.versions.outputs.version }}-dev
+      versionNumber: ${{ needs.versions.outputs.version }}
+      dockerContext: '.'
+      gradleParameters: '["clean", "build", "dockerPrepare"]'
+    secrets:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - versions
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.version }}-dev
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'
