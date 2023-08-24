@@ -51,7 +51,7 @@ dependencies {
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
     testImplementation "io.strikt:strikt-core:0.34.1"
 
-    testImplementation platform("org.testcontainers:testcontainers-bom:1.18.3")
+    testImplementation platform("org.testcontainers:testcontainers-bom:1.19.0")
     testImplementation "org.testcontainers:testcontainers"
     testImplementation "org.testcontainers:mysql"
 
