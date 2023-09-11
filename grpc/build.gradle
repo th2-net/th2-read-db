@@ -13,9 +13,11 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 ext {
-    grpcVersion         = '1.56.0'
-    protobufVersion     = '3.23.2' // The protoc:3.23.3 https://github.com/protocolbuffers/protobuf/issues/13070
+    grpcVersion         = '1.58.0'
+    protobufVersion     = '3.24.3' // The protoc:3.23.3 https://github.com/protocolbuffers/protobuf/issues/13070
     serviceGeneratorVersion = '3.4.0'
+    grpcCommonVersion = '4.3.0-dev'
+
     genBaseDir = file("${buildDir}/generated/source/proto") // from protobuf plugin
 }
 
@@ -33,14 +35,12 @@ dependencies {
 
     implementation "javax.annotation:javax.annotation-api:1.3.2"
 
-    implementation "com.exactpro.th2:grpc-service-generator:$serviceGeneratorVersion"
+    api "com.exactpro.th2:grpc-common:${grpcCommonVersion}"
+    api "com.exactpro.th2:grpc-service-generator:${serviceGeneratorVersion}"
 }
 
 sourceSets {
     main {
-        proto {
-            srcDirs 'proto'
-        }
         // the proto plugins add generated dir to source sets
         resources {
             srcDirs "$genBaseDir/main/services/java/resources"
@@ -61,23 +61,21 @@ protobuf {
         }
     }
     generateProtoTasks {
-        ofSourceSet('main').configureEach {
-            plugins {
-                grpc {}
-                services {
-                    option 'javaInterfacesPath=./java'
-                    option 'javaInterfacesImplPath=./java'
-                    option 'javaMetaInfPath=./java/resources'
-                    option 'pythonPath=./python'
-                }
+        all()*.plugins {
+            grpc {}
+            services {
+                option 'javaInterfacesPath=./java/src'
+                option 'javaInterfacesImplPath=./java/src'
+                option 'javaMetaInfPath=./java/resources'
+                option 'pythonPath=./python'
             }
         }
+        ofSourceSet('main')
     }
 }
 
-
-compileJava.dependsOn('generateProto')
-processResources.dependsOn('generateProto')
+compileJava.dependsOn.add('generateProto')
+processResources.dependsOn.add('generateProto')
 
 java {
     withJavadocJar()

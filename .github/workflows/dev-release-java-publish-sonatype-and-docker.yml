@@ -6,9 +6,16 @@ on:
       - \d+.\d+.\d+-dev
 
 jobs:
-  versions:
+  grpc-version:
+    name: Extract grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: grpc
+  app-version:
     name: Extract app version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: app
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
     runs-on: 'ubuntu-20.04'
@@ -33,10 +40,10 @@ jobs:
     name: Build and publish Python distributions to PyPI
     needs:
       - build-and-publish-grpc-java
-      - versions
+      - grpc-version
     uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
     with:
-      custom-version: ${{ needs.versions.outputs.version }}-dev
+      custom-version: ${{ needs.grpc-version.outputs.version }}.rc1
       project-path: grpc
     secrets:
       pypi_password: ${{ secrets.PYPI_PASSWORD }}
@@ -51,24 +58,23 @@ jobs:
     needs:
       - build-and-publish-grpc-python
       - build-and-publish-grpc-java
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
-      version: ${{ needs.versions.outputs.version }}-dev
-      versionNumber: ${{ needs.versions.outputs.version }}
+      version: ${{ needs.app-version.outputs.version }}-dev
+      versionNumber: ${{ needs.app-version.outputs.version }}
       dockerContext: '.'
       gradleParameters: '["clean", "build", "dockerPrepare"]'
     secrets:
-      docker-password: ${{ secrets.GITHUB_TOKEN }}
-
+      docker-password: ${{ secrets.GITHUB_TOKEN }
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
     needs:
       - publish-docker
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.version }}-dev
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}-dev
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
