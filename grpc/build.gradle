@@ -35,12 +35,15 @@ dependencies {
 
     implementation "javax.annotation:javax.annotation-api:1.3.2"
 
-    api "com.exactpro.th2:grpc-common:${grpcCommonVersion}"
-    api "com.exactpro.th2:grpc-service-generator:${serviceGeneratorVersion}"
+    api "com.exactpro.th2:grpc-common:$grpcCommonVersion"
+    api "com.exactpro.th2:grpc-service-generator:$serviceGeneratorVersion"
 }
 
 sourceSets {
     main {
+        proto {
+            srcDirs 'proto'
+        }
         // the proto plugins add generated dir to source sets
         resources {
             srcDirs "$genBaseDir/main/services/java/resources"
@@ -50,14 +53,14 @@ sourceSets {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
     plugins {
         grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+            artifact = "io.grpc:protoc-gen-grpc-java:$grpcVersion"
         }
         services {
-            artifact = "com.exactpro.th2:grpc-service-generator:${serviceGeneratorVersion}:all@jar"
+            artifact = "com.exactpro.th2:grpc-service-generator:$serviceGeneratorVersion:all@jar"
         }
     }
     generateProtoTasks {
