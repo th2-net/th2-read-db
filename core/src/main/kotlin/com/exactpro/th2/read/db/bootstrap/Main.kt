@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
-import com.exactpro.th2.common.grpc.Direction
-import com.exactpro.th2.common.grpc.MessageGroupBatch
-import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.Direction as ProtoDirection
+import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
+import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.sessionAlias
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.metrics.LIVENESS_MONITOR
@@ -31,6 +32,8 @@ import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.factory.extensions.getCustomConfiguration
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.common.schema.message.QueueAttribute
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
+import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
 import com.exactpro.th2.read.db.app.validate
@@ -41,6 +44,7 @@ import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.UnsafeByteOperations
 import com.opencsv.CSVWriterBuilder
+import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -122,11 +126,48 @@ internal fun setupApp(
     // The BOX is alive
     LIVENESS_MONITOR.enable()
 
-    val messageQueue: BlockingQueue<RawMessage.Builder> = configureMessageStoring(factory, cfg, closeResource)
-
     val appScope = createScope(closeResource)
-
-    val reader = createReader(cfg, appScope, messageQueue, closeResource)
+    val componentBookName = factory.boxConfiguration.bookName
+    val reader = if (cfg.useTransport) {
+        val messageRouter: MessageRouter<GroupBatch> = factory.transportGroupBatchRouter
+        val messageQueue: BlockingQueue<RawMessage.Builder> = configureTransportMessageStoring(
+            cfg,
+            ::transportKeyExtractor,
+            TransportPreprocessor(componentBookName),
+            closeResource
+        ) {
+            val sessionAlias = it[0].idBuilder().sessionAlias
+            messageRouter.sendAll(
+                GroupBatch(
+                    componentBookName,
+                    sessionAlias,
+                    it.map {  builder -> builder.build().toGroup() }
+                ),
+                QueueAttribute.TRANSPORT_GROUP.value
+            )
+        }
+        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toTransportMessage)
+    } else {
+        val messageRouter = factory.messageRouterMessageGroupBatch
+        val messageQueue = configureTransportMessageStoring(
+            cfg,
+            ::protoKeyExtractor,
+            ProtoPreprocessor(componentBookName),
+            closeResource
+        ) {
+            messageRouter.sendAll(
+                ProtoMessageGroupBatch.newBuilder()
+                    .apply {
+                        it.forEach {
+                            addGroupsBuilder() += it
+                        }
+                    }
+                    .build(),
+                QueueAttribute.RAW.value,
+            )
+        }
+        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toProtoMessage)
+    }
 
     val handler = DataBaseReaderGrpcServer(reader)
 
@@ -146,11 +187,12 @@ internal fun setupApp(
     READINESS_MONITOR.enable()
 }
 
-private fun createReader(
+private fun <BUILDER> createReader(
     cfg: DataBaseReaderConfiguration,
     appScope: CoroutineScope,
-    messageQueue: BlockingQueue<RawMessage.Builder>,
+    messageQueue: BlockingQueue<BUILDER>,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
+    toMessage: TableRow.(DataSourceId) -> BUILDER
 ): DataBaseReader {
     val reader = DataBaseReader.createDataBaseReader(
         cfg,
@@ -179,16 +221,32 @@ private fun createReader(
     return reader
 }
 
-private fun TableRow.toMessage(dataSourceId: DataSourceId): RawMessage.Builder {
-    return RawMessage.newBuilder()
+private fun TableRow.toProtoMessage(dataSourceId: DataSourceId): ProtoRawMessage.Builder {
+    return ProtoRawMessage.newBuilder()
         .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
         .apply {
             sessionAlias = dataSourceId.id
-            direction = Direction.FIRST
+            direction = ProtoDirection.FIRST
             associatedMessageType?.also {
                 metadataBuilder.putProperties("th2.csv.override_message_type", it)
             }
         }
+}
+
+private fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.Builder {
+    val builder = RawMessage.builder()
+        .setBody(Unpooled.wrappedBuffer(toCsvBody()))
+        .apply {
+            idBuilder()
+                .setSessionAlias(dataSourceId.id)
+                .setDirection(Direction.INCOMING)
+        }
+
+    if (associatedMessageType != null) {
+        builder.setMetadata(mapOf("th2.csv.override_message_type" to associatedMessageType))
+    }
+
+    return builder
 }
 
 private fun TableRow.toCsvBody(): ByteArray {
@@ -223,62 +281,33 @@ private fun createScope(closeResource: (name: String, resource: () -> Unit) -> U
     return appScope
 }
 
-private fun configureMessageStoring(
-    factory: CommonFactory,
+private fun <BUILDER, DIRECTION> configureTransportMessageStoring(
     cfg: DataBaseReaderConfiguration,
+    keyExtractor: (BUILDER) -> SessionKey<DIRECTION>,
+    preprocessor: Preprocessor<BUILDER, DIRECTION>,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
-): BlockingQueue<RawMessage.Builder> {
-    val messageRouter: MessageRouter<MessageGroupBatch> = factory.messageRouterMessageGroupBatch
-
-    val messagesQueue: BlockingQueue<RawMessage.Builder> = ArrayBlockingQueue(cfg.publication.queueSize)
+    send: (List<BUILDER>) -> Unit
+): BlockingQueue<BUILDER> {
+    val messagesQueue: BlockingQueue<BUILDER> = ArrayBlockingQueue(cfg.publication.queueSize)
 
     val executor = Executors.newSingleThreadExecutor(
         ThreadFactoryBuilder()
-            .setNameFormat("message-saver-%d")
+            .setNameFormat("transport-message-saver-%d")
             .build()
     )
 
-    val sequences = ConcurrentHashMap<SessionKey, Long>()
-
-    val nanosInSecond = TimeUnit.SECONDS.toNanos(1)
-
     val running = AtomicBoolean(true)
-    val componentBookName = factory.boxConfiguration.bookName
     val drainFuture = executor.submit(Saver(
         messagesQueue,
         running,
         cfg.publication.maxBatchSize,
         cfg.publication.maxDelayMillis,
-        { it.run { SessionKey(sessionAlias, direction) } },
-        { key, builder ->
-            builder.apply {
-                sequence = sequences.compute(key) { _, prev ->
-                    if (prev == null) {
-                        Instant.now().run { epochSecond * nanosInSecond + nano }
-                    } else {
-                        prev + 1
-                    }
-                }.let(::requireNotNull)
-                metadataBuilder.idBuilder.apply {
-                    timestamp = Instant.now().toTimestamp()
-                    bookName = componentBookName
-                }
-            }
-        }
-    ) { messages ->
-        messageRouter.sendAll(
-            MessageGroupBatch.newBuilder()
-                .apply {
-                    messages.forEach {
-                        addGroupsBuilder() += it
-                    }
-                }
-                .build(),
-            QueueAttribute.RAW.value,
-        )
-    })
+        keyExtractor,
+        preprocessor::preprocess,
+        send
+    ))
 
-    closeResource("message storing") {
+    closeResource("transport message storing") {
         if (running.compareAndSet(true, false)) {
             try {
                 drainFuture.get(1, TimeUnit.MINUTES)
@@ -297,7 +326,56 @@ private fun configureMessageStoring(
     return messagesQueue
 }
 
-private data class SessionKey(val alias: String, val direction: Direction)
+private val nanosInSecond = TimeUnit.SECONDS.toNanos(1)
+
+private fun protoKeyExtractor(builder: ProtoRawMessage.Builder): SessionKey<ProtoDirection> =
+    SessionKey(builder.sessionAlias, builder.direction)
+
+private fun transportKeyExtractor(builder: RawMessage.Builder): SessionKey<Direction> =
+    SessionKey(builder.idBuilder().sessionAlias, builder.idBuilder().direction)
+
+private abstract class Preprocessor<BUILDER, DIRECTION>(protected val configBookName: String) {
+    protected val sequences = ConcurrentHashMap<SessionKey<DIRECTION>, Long>()
+    abstract fun preprocess(key: SessionKey<DIRECTION>, builder: BUILDER): BUILDER
+}
+
+private class ProtoPreprocessor(bookName: String) : Preprocessor<ProtoRawMessage.Builder, ProtoDirection>(bookName) {
+    override fun preprocess(key: SessionKey<ProtoDirection>, builder: ProtoRawMessage.Builder): ProtoRawMessage.Builder =
+        builder.apply {
+            sequence = sequences.compute(key) { _, prev ->
+                if (prev == null) {
+                    Instant.now().run { epochSecond * nanosInSecond + nano }
+                } else {
+                    prev + 1
+                }
+            }.let(::requireNotNull)
+            metadataBuilder.idBuilder.apply {
+                timestamp = Instant.now().toTimestamp()
+                sessionGroup = sessionAlias
+                bookName = configBookName
+            }
+        }
+}
+
+private class TransportPreprocessor(bookName: String) : Preprocessor<RawMessage.Builder, Direction>(bookName) {
+    override fun preprocess(key: SessionKey<Direction>, builder: RawMessage.Builder): RawMessage.Builder {
+        builder.idBuilder().apply {
+            setSequence(requireNotNull(
+                sequences.compute(key) { _, prev ->
+                    if (prev == null) {
+                        Instant.now().run { epochSecond * nanosInSecond + nano }
+                    } else {
+                        prev + 1
+                    }
+                }
+            ))
+            setTimestamp(Instant.now())
+        }
+        return builder
+    }
+}
+
+private data class SessionKey<DIRECTION>(val alias: String, val direction: DIRECTION)
 
 private fun configureShutdownHook(resources: Deque<() -> Unit>, lock: ReentrantLock, condition: Condition) {
     Runtime.getRuntime().addShutdownHook(thread(

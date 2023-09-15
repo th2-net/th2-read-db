@@ -1,0 +1,80 @@
+name: Build and publish Docker distributions to Github Container Registry ghcr.io
+
+on:
+  push:
+    tags:
+      - \d+.\d+.\d+-dev
+
+jobs:
+  grpc-version:
+    name: Extract grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: grpc
+  app-version:
+    name: Extract app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: app
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 'zulu' '11'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew --info -Pversion_suffix='dev' clean build publish closeAndReleaseSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+
+  build-and-publish-grpc-python:
+    name: Build and publish Python distributions to PyPI
+    needs:
+      - build-and-publish-grpc-java
+      - grpc-version
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
+    with:
+      custom-version: ${{ needs.grpc-version.outputs.version }}rc1
+      project-path: grpc
+    secrets:
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+
+  owasp-scan:
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
+    with:
+      multiproject: true
+
+  publish-docker:
+    name: Build and publish docker image
+    needs:
+      - build-and-publish-grpc-python
+      - build-and-publish-grpc-java
+      - app-version
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.app-version.outputs.version }}-dev
+      versionNumber: ${{ needs.app-version.outputs.version }}
+      dockerContext: '.'
+      gradleParameters: '["clean", "build", "dockerPrepare"]'
+    secrets:
+      docker-password: ${{ secrets.GITHUB_TOKEN }
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - app-version
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}-dev
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'

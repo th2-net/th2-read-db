@@ -18,14 +18,17 @@ dependencies {
     implementation project(':read-db-core')
 
     //region Drivers
-    runtimeOnly('org.postgresql:postgresql:42.5.3') {
+    runtimeOnly('org.postgresql:postgresql:42.6.0') {
         because('prostresql support')
     }
-    runtimeOnly('com.mysql:mysql-connector-j:8.0.32') {
+    runtimeOnly('com.mysql:mysql-connector-j:8.1.0') {
         because('mysql support')
     }
-    runtimeOnly('com.oracle.database.jdbc:ojdbc11:21.9.0.0') {
+    runtimeOnly('com.oracle.database.jdbc:ojdbc11:23.2.0.0') {
         because('oracle support')
+    }
+    runtimeOnly('com.microsoft.sqlserver:mssql-jdbc:12.4.0.jre11') {
+        because('mssql support')
     }
     //endregion
 }
