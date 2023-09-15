@@ -52,6 +52,5 @@ licenseReport {
 
     filters = [new LicenseBundleNormalizer(licenseNormalizerBundlePath, false)]
     renderers = [new JsonReportRenderer('licenses.json', false)]
-    excludeOwnGroup = false
     allowedLicensesFile = new URL("https://raw.githubusercontent.com/th2-net/.github/main/license-compliance/gradle-license-report/allowed-licenses.json")
 }

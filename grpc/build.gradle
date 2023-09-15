@@ -1,9 +1,14 @@
+import com.github.jk1.license.filter.LicenseBundleNormalizer
+import com.github.jk1.license.render.JsonReportRenderer
+
 plugins {
     id 'java'
     id 'java-library'
     id 'maven-publish'
     id 'signing'
     id "com.google.protobuf" version "0.9.3"
+    id "com.github.jk1.dependency-license-report" version "2.5"
+    id "de.undercouch.download" version "5.5.0"
 }
 
 apply from: '../common.gradle'
@@ -83,4 +88,20 @@ processResources.dependsOn.add('generateProto')
 java {
     withJavadocJar()
     withSourcesJar()
+}
+
+licenseReport {
+    def licenseNormalizerBundlePath = "$buildDir/license-normalizer-bundle.json"
+
+    if (!file(licenseNormalizerBundlePath).exists()) {
+        download.run {
+            src 'https://raw.githubusercontent.com/th2-net/.github/main/license-compliance/gradle-license-report/license-normalizer-bundle.json'
+            dest "$buildDir/license-normalizer-bundle.json"
+            overwrite false
+        }
+    }
+
+    filters = [new LicenseBundleNormalizer(licenseNormalizerBundlePath, false)]
+    renderers = [new JsonReportRenderer('licenses.json', false)]
+    allowedLicensesFile = new URL("https://raw.githubusercontent.com/th2-net/.github/main/license-compliance/gradle-license-report/allowed-licenses.json")
 }
