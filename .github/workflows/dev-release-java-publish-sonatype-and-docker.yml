@@ -67,7 +67,7 @@ jobs:
       dockerContext: '.'
       gradleParameters: '["clean", "build", "dockerPrepare"]'
     secrets:
-      docker-password: ${{ secrets.GITHUB_TOKEN }
+      docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
     needs:
