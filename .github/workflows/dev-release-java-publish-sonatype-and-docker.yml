@@ -8,12 +8,12 @@ on:
 jobs:
   grpc-version:
     name: Extract grpc version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
       project-path: grpc
   app-version:
     name: Extract app version
-    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
       project-path: app
   build-and-publish-grpc-and-core-java:
