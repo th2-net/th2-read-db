@@ -84,6 +84,11 @@ tasks.register('unitTest', Test) {
     }
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 jar {
     manifest {
         attributes(

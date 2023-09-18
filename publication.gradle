@@ -33,9 +33,9 @@ publishing {
         mavenJava(MavenPublication) {
             from(components.java)
             pom {
-                name = rootProject.name
+                name = project.name
                 packaging = 'jar'
-                description = rootProject.description
+                description = project.description
                 url = vcs_url
                 scm {
                     url = vcs_url

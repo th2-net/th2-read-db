@@ -16,8 +16,8 @@ jobs:
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
     with:
       project-path: app
-  build-and-publish-grpc-java:
-    name: Build and publish Java gRPC distributions
+  build-and-publish-grpc-and-core-java:
+    name: Build and publish Java gRPC and core distributions
     runs-on: 'ubuntu-20.04'
     steps:
       - uses: actions/checkout@v3
@@ -39,7 +39,7 @@ jobs:
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
-      - build-and-publish-grpc-java
+      - build-and-publish-grpc-and-core-java
       - grpc-version
     uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
     with:
@@ -57,7 +57,7 @@ jobs:
     name: Build and publish docker image
     needs:
       - build-and-publish-grpc-python
-      - build-and-publish-grpc-java
+      - build-and-publish-grpc-and-core-java
       - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
