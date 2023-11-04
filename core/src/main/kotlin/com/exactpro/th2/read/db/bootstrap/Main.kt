@@ -70,6 +70,8 @@ import kotlin.system.exitProcess
 
 private val LOGGER = KotlinLogging.logger { }
 
+private const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
+
 fun main(args: Array<String>) {
     LOGGER.info { "Starting the read-db service" }
     // Here is an entry point to the th2-box.
@@ -192,14 +194,14 @@ private fun <BUILDER> createReader(
     appScope: CoroutineScope,
     messageQueue: BlockingQueue<BUILDER>,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
-    toMessage: TableRow.(DataSourceId) -> BUILDER
+    toMessage: TableRow.(DataSourceId, Map<String, String>) -> BUILDER
 ): DataBaseReader {
     val reader = DataBaseReader.createDataBaseReader(
         cfg,
         appScope,
         pullingListener = object : UpdateListener {
-            override fun onUpdate(dataSourceId: DataSourceId, row: TableRow) {
-                messageQueue.put(row.toMessage(dataSourceId))
+            override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) {
+                messageQueue.put(row.toMessage(dataSourceId, properties))
             }
 
             override fun onError(dataSourceId: DataSourceId, reason: Throwable) {
@@ -213,7 +215,7 @@ private fun <BUILDER> createReader(
         },
         rowListener = { sourceId, row ->
             LOGGER.debug { "Storing row from $sourceId. Columns: ${row.columns.keys}" }
-            messageQueue.put(row.toMessage(sourceId))
+            messageQueue.put(row.toMessage(sourceId, emptyMap()))
         },
     )
     closeResource("reader", reader::close)
@@ -221,19 +223,20 @@ private fun <BUILDER> createReader(
     return reader
 }
 
-private fun TableRow.toProtoMessage(dataSourceId: DataSourceId): ProtoRawMessage.Builder {
+private fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<String, String>): ProtoRawMessage.Builder {
     return ProtoRawMessage.newBuilder()
         .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
         .apply {
             sessionAlias = dataSourceId.id
             direction = ProtoDirection.FIRST
             associatedMessageType?.also {
-                metadataBuilder.putProperties("th2.csv.override_message_type", it)
+                metadataBuilder.putProperties(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, it)
             }
+            metadataBuilder.putAllProperties(properties)
         }
 }
 
-private fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.Builder {
+private fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties: Map<String, String>): RawMessage.Builder {
     val builder = RawMessage.builder()
         .setBody(Unpooled.wrappedBuffer(toCsvBody()))
         .apply {
@@ -243,8 +246,9 @@ private fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.
         }
 
     if (associatedMessageType != null) {
-        builder.setMetadata(mapOf("th2.csv.override_message_type" to associatedMessageType))
+        builder.addMetadataProperty(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, associatedMessageType)
     }
+    properties.forEach(builder::addMetadataProperty)
 
     return builder
 }

@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import org.apache.commons.lang3.builder.HashCodeBuilder
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -97,6 +98,14 @@ class DataBaseMonitorServiceImpl(
         updateQueryId: QueryId,
         updateListener: UpdateListener
     ) {
+        val properties = mapOf(
+            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to HashCodeBuilder()
+                .append(dataBaseService.dataSourceHash(dataSourceId))
+                .append(dataBaseService.queryHash(updateQueryId))
+                .toHashCode()
+                .toString()
+        )
+
         val lastRow: TableRow? = initQueryId?.let { queryId ->
             dataBaseService.executeQuery(
                 dataSourceId,
@@ -126,7 +135,7 @@ class DataBaseMonitorServiceImpl(
                     updateQueryId,
                     finalParameters,
                 ).onEach {
-                    updateListener.onUpdate(dataSourceId, it)
+                    updateListener.onUpdate(dataSourceId, it, properties)
                 }.onCompletion { reason ->
                     reason?.also { updateListener.onError(dataSourceId, it) }
                 }.lastOrNull()?.also {
@@ -140,6 +149,8 @@ class DataBaseMonitorServiceImpl(
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
+
+        private const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
     }
 
     override fun close() {

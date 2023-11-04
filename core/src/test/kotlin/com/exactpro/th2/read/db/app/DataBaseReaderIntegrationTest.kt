@@ -249,7 +249,7 @@ internal class DataBaseReaderIntegrationTest {
 
     private fun UpdateListener.assertCaptured(persons: List<Person>) {
         val captor = argumentCaptor<TableRow>()
-        verify(this, times(persons.size)).onUpdate(any(), captor.capture())
+        verify(this, times(persons.size)).onUpdate(any(), captor.capture(), any())
         captor.allValues.map {
             Person(
                 checkNotNull(it.columns["name"]).toString(),

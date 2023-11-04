@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
@@ -148,9 +147,9 @@ class DataBaseReader(
         private val listeners: Collection<UpdateListener>,
         private val rowTransformer: (TableRow) -> TableRow,
     ) : UpdateListener {
-        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow) {
+        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) {
             val updatedRow = rowTransformer(row)
-            forEach { onUpdate(dataSourceId, updatedRow) }
+            forEach { onUpdate(dataSourceId, updatedRow, properties) }
         }
 
         override fun onError(dataSourceId: DataSourceId, reason: Throwable) {

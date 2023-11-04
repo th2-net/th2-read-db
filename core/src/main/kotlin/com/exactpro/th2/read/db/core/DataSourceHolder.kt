@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,6 @@
 
 package com.exactpro.th2.read.db.core
 
-import kotlinx.coroutines.flow.Flow
+import javax.sql.DataSource
 
-interface DataBaseService {
-    fun dataSourceHash(dataSourceId: DataSourceId): Int
-    fun queryHash(queryId: QueryId): Int
-    fun executeQuery(
-        dataSourceId: DataSourceId,
-        queryId: QueryId,
-        parameters: QueryParametersValues,
-    ): Flow<TableRow>
-}
+data class DataSourceHolder(val dataSource: DataSource, val dataSourceHash: Int)
