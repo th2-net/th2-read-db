@@ -26,12 +26,11 @@ import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
+import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
+import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
+import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
+import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl.Companion.calculateHash
+import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
@@ -39,12 +38,20 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.sql.Connection
@@ -247,16 +254,47 @@ internal class DataBaseReaderIntegrationTest {
         }
     }
 
+    @Test
+    fun calculateHashTest() {
+        val dataSourceId = DataSourceId("test-data-source-id")
+        val queryId = QueryId("test-query-id")
+        val dataSourceProvider = BaseDataSourceProvider(
+            mapOf(dataSourceId to DataSourceConfiguration(
+                "jdbc:mysql://localhost:1234/test_data",
+                "test-username",
+                "test-password",
+                mapOf("test-property" to "test-property-value")
+            ))
+        )
+        val queryProvider = BaseQueryProvider(
+            mapOf(queryId to QueryConfiguration(
+                "test-query",
+                mapOf("test-query-parameter" to listOf("test-query-parameter-value-a", "test-query-parameter-value-b"))
+            ))
+        )
+        val dataBaseService = DataBaseServiceImpl(
+            dataSourceProvider,
+            queryProvider
+        )
+
+        assertEquals(-1879617647, dataBaseService.calculateHash(dataSourceId, queryId))
+    }
+
     private fun UpdateListener.assertCaptured(persons: List<Person>) {
-        val captor = argumentCaptor<TableRow>()
-        verify(this, times(persons.size)).onUpdate(any(), captor.capture(), any())
-        captor.allValues.map {
+        val tableRawCaptor = argumentCaptor<TableRow>()
+        val propertiesCaptor = argumentCaptor<Map<String, String>>()
+        verify(this, times(persons.size)).onUpdate(any(), tableRawCaptor.capture(), propertiesCaptor.capture())
+        tableRawCaptor.allValues.map {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
                 (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
             )
         }.also {
             expectThat(it).containsExactly(persons)
+        }
+        propertiesCaptor.allValues.forEach {
+            assertEquals(1, it.size)
+            assertNotNull(it[TH2_PULL_TASK_UPDATE_HASH_PROPERTY])
         }
     }
     private fun RowListener.assertCaptured(persons: List<Person>) {

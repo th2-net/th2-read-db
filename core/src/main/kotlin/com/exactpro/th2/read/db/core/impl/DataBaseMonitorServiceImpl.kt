@@ -99,11 +99,7 @@ class DataBaseMonitorServiceImpl(
         updateListener: UpdateListener
     ) {
         val properties = mapOf(
-            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to HashCodeBuilder()
-                .append(dataBaseService.dataSourceHash(dataSourceId))
-                .append(dataBaseService.queryHash(updateQueryId))
-                .toHashCode()
-                .toString()
+            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to dataBaseService.calculateHash(dataSourceId, updateQueryId).toString()
         )
 
         val lastRow: TableRow? = initQueryId?.let { queryId ->
@@ -150,7 +146,12 @@ class DataBaseMonitorServiceImpl(
     companion object {
         private val LOGGER = KotlinLogging.logger { }
 
-        private const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
+        internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
+        internal fun DataBaseService.calculateHash(dataSourceId: DataSourceId, queryId: QueryId): Int =
+            HashCodeBuilder()
+                .append(dataSourceHash(dataSourceId))
+                .append(queryHash(queryId))
+                .toHashCode()
     }
 
     override fun close() {
