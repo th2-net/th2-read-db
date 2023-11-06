@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,12 @@
 
 package com.exactpro.th2.read.db.core
 
-import kotlinx.coroutines.CoroutineScope
-import java.time.Duration
+interface MessageLoader {
+    fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow?
 
-interface DataBaseMonitorService : AutoCloseable {
-    fun CoroutineScope.submitTask(
-        dataSourceId: DataSourceId,
-        initQueryId: QueryId?,
-        initParameters: QueryParametersValues,
-        useColumns: Set<String>,
-        updateQueryId: QueryId,
-        updateParameters: QueryParametersValues,
-        updateListener: UpdateListener,
-        messageLoader: MessageLoader,
-        interval: Duration,
-    ) : TaskId
-
-    suspend fun cancelTask(id: TaskId)
+    companion object {
+        val NULL_RESULT = object : MessageLoader {
+            override fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow? = null
+        }
+    }
 }

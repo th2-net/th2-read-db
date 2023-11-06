@@ -36,6 +36,8 @@ dependencies {
     api platform("com.exactpro.th2:bom:4.5.0")
     implementation "com.exactpro.th2:common:5.4.0-dev"
     implementation "com.exactpro.th2:common-utils:2.2.0-dev"
+    implementation "com.exactpro.th2:lw-data-provider-utils:0.0.1-TH2-5119-+"
+
     implementation "org.slf4j:slf4j-api"
 
     implementation("org.apache.commons:commons-dbcp2:2.9.0") {

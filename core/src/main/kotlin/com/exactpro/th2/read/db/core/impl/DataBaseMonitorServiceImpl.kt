@@ -19,6 +19,7 @@ package com.exactpro.th2.read.db.core.impl
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseService
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TableRow
@@ -55,6 +56,7 @@ class DataBaseMonitorServiceImpl(
         updateQueryId: QueryId,
         updateParameters: QueryParametersValues,
         updateListener: UpdateListener,
+        messageLoader: MessageLoader,
         interval: Duration,
     ): TaskId {
         val id = TaskId(ids.getAndIncrement().toString())
@@ -64,7 +66,17 @@ class DataBaseMonitorServiceImpl(
             check(id !in runningTasks) { "task with id $id already submitted" }
             val job = launch {
                 try {
-                    poolUpdates(dataSourceId, initQueryId, initParameters, useColumns, updateParameters, interval, updateQueryId, updateListener)
+                    poolUpdates(
+                        dataSourceId,
+                        initQueryId,
+                        initParameters,
+                        useColumns,
+                        updateParameters,
+                        interval,
+                        updateQueryId,
+                        updateListener,
+                        messageLoader
+                    )
                 } finally {
                     updateListener.onComplete(dataSourceId)
                 }
@@ -96,19 +108,21 @@ class DataBaseMonitorServiceImpl(
         updateParameters: QueryParametersValues,
         interval: Duration,
         updateQueryId: QueryId,
-        updateListener: UpdateListener
+        updateListener: UpdateListener,
+        messageLoader: MessageLoader
     ) {
         val properties = mapOf(
             TH2_PULL_TASK_UPDATE_HASH_PROPERTY to dataBaseService.calculateHash(dataSourceId, updateQueryId).toString()
         )
 
-        val lastRow: TableRow? = initQueryId?.let { queryId ->
-            dataBaseService.executeQuery(
-                dataSourceId,
-                queryId,
-                initParameters,
-            ).lastOrNull()
-        }
+        val lastRow: TableRow? = messageLoader.load(dataSourceId, properties)
+            ?: initQueryId?.let { queryId ->
+                dataBaseService.executeQuery(
+                    dataSourceId,
+                    queryId,
+                    initParameters,
+                ).lastOrNull()
+            }
 
         fun updateParameters(lastRow: TableRow): QueryParametersValues {
             return useColumns.associateWith {

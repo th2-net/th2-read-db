@@ -20,6 +20,7 @@ import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataSourceProvider
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
@@ -43,6 +44,7 @@ class DataBaseReader(
     private val scope: CoroutineScope,
     private val pullingListener: UpdateListener,
     private val rowListener: RowListener,
+    private val messageLoader: MessageLoader,
 ) : AutoCloseable {
 
     fun start() {
@@ -68,6 +70,7 @@ class DataBaseReader(
                         task.updateQueryId,
                         task.updateParameters,
                         pullingListener,
+                        messageLoader,
                         Duration.ofMillis(task.interval),
                     )
                 }
@@ -112,6 +115,7 @@ class DataBaseReader(
                     updateQueryId,
                     updateParameters,
                     wrap(rowTransformer, updateListener, pullingListener),
+                    messageLoader,
                     interval,
                 )
             }
@@ -178,6 +182,7 @@ class DataBaseReader(
             scope: CoroutineScope,
             pullingListener: UpdateListener,
             rowListener: RowListener,
+            loadLastMessage: MessageLoader,
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
@@ -190,6 +195,7 @@ class DataBaseReader(
                 scope,
                 pullingListener,
                 rowListener,
+                loadLastMessage,
             )
         }
     }

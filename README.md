@@ -1,4 +1,4 @@
-# th2-read-db 0.3.3
+# th2-read-db 0.4.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -95,7 +95,6 @@ Pulls updates from the specified data source using the specified queries.
 + updateParameters - the list of parameters that should be used in the update query
 + interval - the interval in millis to pull updates
 
-
 # Interaction
 
 You can interact with read-db via gRPC. It supports executing direct queries and submitting pull tasks.
@@ -105,8 +104,28 @@ You can interact with read-db via gRPC. It supports executing direct queries and
 The read-db publishes all extracted data to MQ as raw messages in CSV format. The alias matches the **data source id**.
 Message might contain property `th2.csv.override_message_type` with value that should be used as message type for the row message
 
-# CR example
+# Tasks
 
+## Pull
+
+This type of task work by the algorithm:
+
+1) try to load the last message with `th2.pull_task.update_hash` property published to Cradle if you connect read-db to a data-provider [Go to gRPC client configuration](#client)
+2) if read-db isn't connected to a data-provider or no one message hasn't been published into Cradle, the task execute init query.
+3) this task executes update query with specified `interval`
+
+Pull task send all messages loaded from database via a pin with 'transport-group', 'publish' attributes. 
+Each message has `th2.pull_task.update_hash` property calculated by source and query configurations. 
+
+# gRPC
+
+## Client
+
+Pull task tries to load the last message published to Cradle instead of initialise from the start 
+if you connect read-db to a data-provider using `com.exactpro.th2.dataprovider.lw.grpc.DataProviderService`. 
+
+# CR example
+## infra 1
 ```yaml
 apiVersion: th2.exactpro.com/v1
 kind: Th2Box
@@ -154,6 +173,9 @@ spec:
       maxBatchSize: 100
     useTransport: true
   pins:
+    - name: client
+      connection-type: grpc-client
+      service-class: com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
     - name: server
       connection-type: grpc-server
       service-classes:
@@ -176,9 +198,91 @@ spec:
         cpu: 50m
 ```
 
+## infra 2
+```yaml
+apiVersion: th2.exactpro.com/v2
+kind: Th2Box
+metadata:
+  name: read-db
+spec:
+  imageName: ghcr.io/th2-net/th2-read-db
+  imageVersion: 0.0.1
+  type: th2-read
+  customConfig:
+    dataSources:
+      persons:
+        url: "jdbc:mysql://192.168.0.1:3306/people"
+        username: user
+        password: pwd
+        properties:
+          prop1: value1
+    queries:
+      all:
+        query: "SELECT * FROM person WHERE birthday > ${birthday:date};"
+        defaultParameters:
+          birthday:
+            - 1996-01-31
+      current_state:
+        query: "SELECT * FROM person ORDER BY id DESC LIMIT 1;"
+      updates:
+        query: "SELECT * FROM person WHERE id > ${id:integer};"
+    startupTasks:
+      - type: read
+        dataSource: persons
+        queryId: all
+        parameters:
+          name:
+            - Ivan
+      - type: pull
+        dataSource: persons
+        initQueryId: current_state
+        updateQueryId: updates
+        useColumns:
+          - id
+        interval: 1000
+    publication:
+      queueSize: 1000
+      maxDelayMillis: 1000
+      maxBatchSize: 100
+    useTransport: true
+  pins:
+    mq:
+      publishers:
+        - name: store
+          attributes: ['transport-group', 'publish', 'store']
+    grpc:
+      client:
+        - name: to_data_provider
+          serviceClass: com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
+          linkTo:
+            - box: lw-data-provider
+              pin: server
+      server:
+        - name: server
+          serviceClasses:
+            - com.exactpro.th2.read.db.grpc.ReadDbService
+            - th2.read_db.ReadDbService
+  extendedSettings:
+    service:
+      enabled: false
+    envVariables:
+      JAVA_TOOL_OPTIONS: "-XX:+ExitOnOutOfMemoryError"
+    resources:
+      limits:
+        memory: 500Mi
+        cpu: 600m
+      requests:
+        memory: 100Mi
+        cpu: 50m
+```
+
 ## Changes
 
-### 0.3.3
+### 0.4.0
+
+#### Feature:
+
++ pull task optionally loads the last message for initialisation from a data-provider via gRPC
 
 #### Changed:
 

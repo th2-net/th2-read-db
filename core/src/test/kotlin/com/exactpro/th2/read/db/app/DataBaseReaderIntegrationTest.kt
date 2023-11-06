@@ -20,6 +20,7 @@ import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.containers.MySqlContainer
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.ResultListener
@@ -96,6 +97,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives data from database`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> {  }
         runTest {
             val reader = DataBaseReader.createDataBaseReader(
                 DataBaseReaderConfiguration(
@@ -117,7 +119,8 @@ internal class DataBaseReaderIntegrationTest {
                 ),
                 this,
                 genericUpdateListener,
-                genericRowListener
+                genericRowListener,
+                messageLoader,
             )
             val listener = mock<ResultListener> { }
             reader.executeQuery(
@@ -140,6 +143,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives update from table (with init query)`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> {  }
         val interval = Duration.ofMillis(100)
         runTest {
             val reader = DataBaseReader.createDataBaseReader(
@@ -162,7 +166,8 @@ internal class DataBaseReaderIntegrationTest {
                 ),
                 this,
                 genericUpdateListener,
-                genericRowListener
+                genericRowListener,
+                messageLoader
             )
             val listener = mock<UpdateListener> { }
             val taskId = reader.submitPullTask(
