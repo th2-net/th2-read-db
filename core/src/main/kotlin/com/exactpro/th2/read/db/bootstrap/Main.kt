@@ -17,18 +17,15 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
-import com.exactpro.th2.common.grpc.Direction as ProtoDirection
-import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
-import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
-import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.sessionAlias
+import com.exactpro.th2.common.message.sessionGroup
+import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.metrics.LIVENESS_MONITOR
 import com.exactpro.th2.common.metrics.READINESS_MONITOR
-import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.factory.extensions.getCustomConfiguration
 import com.exactpro.th2.common.schema.message.MessageRouter
@@ -36,6 +33,7 @@ import com.exactpro.th2.common.schema.message.QueueAttribute
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
 import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
+import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
 import com.exactpro.th2.lwdataprovider.MessageSearcher
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
@@ -47,7 +45,10 @@ import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.UnsafeByteOperations
+import com.opencsv.CSVParserBuilder
+import com.opencsv.CSVReaderBuilder
 import com.opencsv.CSVWriterBuilder
+import com.opencsv.bean.CsvToBean
 import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -55,11 +56,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
-import java.util.Deque
+import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -72,6 +74,10 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import com.exactpro.th2.common.grpc.Direction as ProtoDirection
+import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
+
 
 private val LOGGER = KotlinLogging.logger { }
 
@@ -209,9 +215,7 @@ private fun createMessageLoader(
                     interval = Duration.ofDays(1), // FIXME: use parameter for that
                 ) {
                     properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
-                }?.message?.bodyRaw?.toByteArray()?.let {
-                    MAPPER.readValue(it, TableRow::class.java)
-                }
+                }?.toTableRow()
         }
     }
 }.onFailure {
@@ -222,7 +226,7 @@ private fun createMessageLoader(
     LOGGER.info { "Loading message from a data-provider is enabled" }
 }.getOrNull() ?: MessageLoader.NULL_RESULT
 
-private fun <BUILDER> createReader(
+private fun <BUILDER: Any> createReader(
     cfg: DataBaseReaderConfiguration,
     appScope: CoroutineScope,
     messageQueue: BlockingQueue<BUILDER>,
@@ -301,6 +305,30 @@ private fun TableRow.toCsvBody(): ByteArray {
             }
         it
     }.toByteArray()
+}
+
+/**
+ * NOTE: crated TableRow contains only [String] values
+ */
+private fun MessageSearchResponse.toTableRow(): TableRow {
+    return ByteArrayInputStream(message.bodyRaw.toByteArray()).use {
+        CSVReaderBuilder(it.reader())
+            .withCSVParser(CSVParserBuilder().withSeparator(',').build())
+            .build().use { reader ->
+                val rows = CsvToBean<Map<String, String>>().apply {
+                    setCsvReader(reader)
+                }.parse()
+
+                check(rows.size == 1) {
+                    "Message with '${message.messageId.toJson()}' id has ${rows.size} rows instead of 1"
+                }
+
+                TableRow(
+                    rows.single(),
+                    message.getMessagePropertiesOrDefault(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, null)
+                )
+            }
+    }
 }
 
 private fun Any.toStringValue(): String = when (this) {
