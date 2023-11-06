@@ -202,6 +202,7 @@ private fun createMessageLoader(
             override fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow? =
                 findLastOrNull(
                     book = componentBookName,
+                    sessionGroup = dataSourceId.id,
                     messageStreams = hashSetOf(MessageSearcher.create(dataSourceId.id, FIRST)),
                     searchInterval = Duration.ofDays(1),
                 ) {
