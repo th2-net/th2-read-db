@@ -283,6 +283,7 @@ spec:
 #### Feature:
 
 + pull task optionally loads the last message for initialisation from a data-provider via gRPC
++ updated common: `5.7.0-dev`
 
 #### Changed:
 

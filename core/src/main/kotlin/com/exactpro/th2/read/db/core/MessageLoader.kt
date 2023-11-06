@@ -16,10 +16,17 @@
 
 package com.exactpro.th2.read.db.core
 
+@FunctionalInterface
 interface MessageLoader {
+    /**
+     * Loads the last message from cradle
+     * @param dataSourceId is used for session alias determination related to the data source
+     * @param properties is used for filtering messages to find the first suitable
+     */
     fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow?
 
     companion object {
+        @JvmField
         val NULL_RESULT = object : MessageLoader {
             override fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow? = null
         }

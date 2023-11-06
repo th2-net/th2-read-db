@@ -17,12 +17,12 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
+import com.exactpro.th2.common.grpc.Direction.FIRST
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
 import com.exactpro.th2.common.message.sessionAlias
 import com.exactpro.th2.common.message.sessionGroup
-import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.metrics.LIVENESS_MONITOR
 import com.exactpro.th2.common.metrics.READINESS_MONITOR
@@ -33,7 +33,6 @@ import com.exactpro.th2.common.schema.message.QueueAttribute
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
 import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
-import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
 import com.exactpro.th2.lwdataprovider.MessageSearcher
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
@@ -45,10 +44,6 @@ import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.UnsafeByteOperations
-import com.opencsv.CSVParserBuilder
-import com.opencsv.CSVReaderBuilder
-import com.opencsv.CSVWriterBuilder
-import com.opencsv.bean.CsvToBean
 import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -56,9 +51,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -81,7 +73,7 @@ import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
 private val LOGGER = KotlinLogging.logger { }
 
-private const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
+internal const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
 
 fun main(args: Array<String>) {
     LOGGER.info { "Starting the read-db service" }
@@ -205,14 +197,13 @@ private fun createMessageLoader(
     factory: CommonFactory,
     componentBookName: String
 ) = runCatching {
-    MessageSearcher(factory.grpcRouter.getService(DataProviderService::class.java)).run {
+    MessageSearcher.create(factory.grpcRouter.getService(DataProviderService::class.java)).run {
         object : MessageLoader {
             override fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow? =
-                searchLastOrNull(
+                findLastOrNull(
                     book = componentBookName,
-                    sessionAlias = dataSourceId.id,
-                    direction = com.exactpro.th2.common.grpc.Direction.FIRST,
-                    interval = Duration.ofDays(1), // FIXME: use parameter for that
+                    messageStreams = hashSetOf(MessageSearcher.create(dataSourceId.id, FIRST)),
+                    searchInterval = Duration.ofDays(1),
                 ) {
                     properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
                 }?.toTableRow()
@@ -267,7 +258,7 @@ private fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<
         .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
         .apply {
             sessionAlias = dataSourceId.id
-            direction = ProtoDirection.FIRST
+            direction = FIRST
             associatedMessageType?.also {
                 metadataBuilder.putProperties(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, it)
             }
@@ -290,52 +281,6 @@ private fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties: 
     properties.forEach(builder::addMetadataProperty)
 
     return builder
-}
-
-private fun TableRow.toCsvBody(): ByteArray {
-    return ByteArrayOutputStream().use {
-        CSVWriterBuilder(it.writer())
-            .withSeparator(',')
-            .build().use { writer ->
-                val columnNames = columns.keys.toTypedArray()
-                val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
-                    .toTypedArray()
-                writer.writeNext(columnNames)
-                writer.writeNext(values)
-            }
-        it
-    }.toByteArray()
-}
-
-/**
- * NOTE: crated TableRow contains only [String] values
- */
-private fun MessageSearchResponse.toTableRow(): TableRow {
-    return ByteArrayInputStream(message.bodyRaw.toByteArray()).use {
-        CSVReaderBuilder(it.reader())
-            .withCSVParser(CSVParserBuilder().withSeparator(',').build())
-            .build().use { reader ->
-                val rows = CsvToBean<Map<String, String>>().apply {
-                    setCsvReader(reader)
-                }.parse()
-
-                check(rows.size == 1) {
-                    "Message with '${message.messageId.toJson()}' id has ${rows.size} rows instead of 1"
-                }
-
-                TableRow(
-                    rows.single(),
-                    message.getMessagePropertiesOrDefault(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, null)
-                )
-            }
-    }
-}
-
-private fun Any.toStringValue(): String = when (this) {
-    is BigDecimal -> stripTrailingZeros().toPlainString()
-    is Double -> toBigDecimal().toStringValue()
-    is Float -> toBigDecimal().toStringValue()
-    else -> toString()
 }
 
 private fun createScope(closeResource: (name: String, resource: () -> Unit) -> Unit): CoroutineScope {
