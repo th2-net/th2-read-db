@@ -89,7 +89,7 @@ Pulls updates from the specified data source using the specified queries.
 + dataSource - the id of the source that should be used
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
-+ initParameters - the parameters that should be used in the init query. Also, The task use these parameters to configure the fist `updateQuery` if `initQuery` parameter is missing
++ initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
 + updateQueryId - the id of the query that should be used to pull updates from the database
 + useColumns - the set of columns that should be used in the update query (the last value from init query and from pull query)
 + updateParameters - the list of parameters that should be used in the update query
