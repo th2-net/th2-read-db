@@ -44,8 +44,6 @@ class DataBaseServiceImpl(
     private val dataSourceProvider: DataSourceProvider,
     private val queriesProvider: QueryProvider,
 ) : DataBaseService {
-    override fun dataSourceHash(dataSourceId: DataSourceId): Int = dataSourceProvider.dataSource(dataSourceId).dataSourceHash
-    override fun queryHash(queryId: QueryId): Int = queriesProvider[queryId].queryHash
     override fun executeQuery(
         dataSourceId: DataSourceId,
         queryId: QueryId,

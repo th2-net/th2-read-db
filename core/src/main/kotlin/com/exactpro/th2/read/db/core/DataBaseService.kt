@@ -19,8 +19,6 @@ package com.exactpro.th2.read.db.core
 import kotlinx.coroutines.flow.Flow
 
 interface DataBaseService {
-    fun dataSourceHash(dataSourceId: DataSourceId): Int
-    fun queryHash(queryId: QueryId): Int
     fun executeQuery(
         dataSourceId: DataSourceId,
         queryId: QueryId,

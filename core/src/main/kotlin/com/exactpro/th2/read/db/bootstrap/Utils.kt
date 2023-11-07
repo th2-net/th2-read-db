@@ -28,10 +28,12 @@ import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.util.HashMap
 
+private const val SEPARATOR = ','
+
 internal fun TableRow.toCsvBody(): ByteArray {
     return ByteArrayOutputStream().use {
         CSVWriterBuilder(it.writer())
-            .withSeparator(',')
+            .withSeparator(SEPARATOR)
             .build().use { writer ->
                 val columnNames = columns.keys.toTypedArray()
                 val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
@@ -52,16 +54,15 @@ internal fun MessageSearchResponse.toTableRow(): TableRow {
             .withCSVParser(
                 CSVParserBuilder()
                 .withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
-                .withSeparator(',')
+                .withSeparator(SEPARATOR)
                 .build()
             ).build().use { reader ->
-                val lines = reader.readAll()
+                val lines: MutableList<Array<String>> = reader.readAll()
                 check(lines.size == 2) {
                     "CSV content of '${message.messageId.toJson()}' message id has ${lines.size} rows instead of 2"
                 }
 
-                val header = lines[0]
-                val row = lines[1]
+                val (header, row) = lines
                 check(header.size == row.size) {
                     "CSV content of '${message.messageId.toJson()}' message id has different length of header [${header.size}] and row [${row.size}]"
                 }

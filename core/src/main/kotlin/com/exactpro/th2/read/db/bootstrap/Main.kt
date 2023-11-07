@@ -30,10 +30,13 @@ import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.factory.extensions.getCustomConfiguration
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.common.schema.message.QueueAttribute
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
 import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
 import com.exactpro.th2.lwdataprovider.MessageSearcher
+import com.exactpro.th2.lwdataprovider.MessageSearcher.Companion.createMessageStream
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
 import com.exactpro.th2.read.db.app.validate
@@ -53,7 +56,7 @@ import kotlinx.coroutines.cancel
 import mu.KotlinLogging
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Deque
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -198,16 +201,15 @@ private fun createMessageLoader(
     componentBookName: String
 ) = runCatching {
     MessageSearcher.create(factory.grpcRouter.getService(DataProviderService::class.java)).run {
-        object : MessageLoader {
-            override fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow? =
-                findLastOrNull(
-                    book = componentBookName,
-                    sessionGroup = dataSourceId.id,
-                    messageStreams = hashSetOf(MessageSearcher.create(dataSourceId.id, FIRST)),
-                    searchInterval = Duration.ofDays(1),
-                ) {
-                    properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
-                }?.toTableRow()
+        MessageLoader { dataSourceId, properties ->
+            findLastOrNull(
+                searchInterval = Duration.ofDays(1),
+                book = componentBookName,
+                sessionGroup = dataSourceId.id,
+                messageStreams = hashSetOf(createMessageStream(dataSourceId.id, FIRST)),
+            ) {
+                properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
+            }?.toTableRow()
         }
     }
 }.onFailure {

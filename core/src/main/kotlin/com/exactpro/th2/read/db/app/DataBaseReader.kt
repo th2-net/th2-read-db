@@ -20,6 +20,7 @@ import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataSourceProvider
+import com.exactpro.th2.read.db.core.HashService
 import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.ResultListener
@@ -30,6 +31,7 @@ import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl
 import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
+import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.onCompletion
@@ -187,7 +189,8 @@ class DataBaseReader(
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
             val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider)
-            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService)
+            val hashService: HashService = BaseHashServiceImpl(sourceProvider, queryProvider)
+            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService, hashService)
             return DataBaseReader(
                 dataBaseService,
                 monitorService,

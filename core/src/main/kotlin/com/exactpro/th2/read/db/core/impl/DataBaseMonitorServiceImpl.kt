@@ -19,12 +19,14 @@ package com.exactpro.th2.read.db.core.impl
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseService
+import com.exactpro.th2.read.db.core.HashService
 import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.TaskId
 import com.exactpro.th2.read.db.core.UpdateListener
+import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl.Companion.calculateHash
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -36,13 +38,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
-import org.apache.commons.lang3.builder.HashCodeBuilder
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 class DataBaseMonitorServiceImpl(
     private val dataBaseService: DataBaseService,
+    private val hashService: HashService,
 ) : DataBaseMonitorService {
     private val ids = AtomicInteger(1)
     private val runningTasks: MutableMap<TaskId, TaskHolder> = ConcurrentHashMap()
@@ -112,7 +114,7 @@ class DataBaseMonitorServiceImpl(
         messageLoader: MessageLoader
     ) {
         val properties = mapOf(
-            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to dataBaseService.calculateHash(dataSourceId, updateQueryId).toString()
+            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, updateQueryId).toString()
         )
 
         val lastRow: TableRow? = messageLoader.load(dataSourceId, properties)
@@ -161,11 +163,6 @@ class DataBaseMonitorServiceImpl(
         private val LOGGER = KotlinLogging.logger { }
 
         internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
-        internal fun DataBaseService.calculateHash(dataSourceId: DataSourceId, queryId: QueryId): Int =
-            HashCodeBuilder()
-                .append(dataSourceHash(dataSourceId))
-                .append(queryHash(queryId))
-                .toHashCode()
     }
 
     override fun close() {

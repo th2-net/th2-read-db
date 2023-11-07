@@ -16,17 +16,7 @@
 
 package com.exactpro.th2.read.db.core
 
-fun interface MessageLoader {
-    /**
-     * Loads the most recent message from the Cradle produced by data source with [dataSourceId]
-     * that has a specified set of [properties] in its metadata
-     * @param dataSourceId is used for session alias determination related to the data source
-     * @param properties is used for filtering messages to find the first suitable
-     */
-    fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow?
-
-    companion object {
-        @JvmField
-        val NULL_RESULT = MessageLoader { _, _ -> null }
-    }
+interface HashService {
+    fun dataSourceHash(dataSourceId: DataSourceId): Int
+    fun queryHash(queryId: QueryId): Int
 }

@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.app
+package com.exactpro.th2.read.db.core.impl
 
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.exactpro.th2.read.db.core.QueryId
-import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
-import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
-import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl.Companion.calculateHash
-import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
+import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl.Companion.calculateHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-internal class DataBaseReaderTest {
+internal class BaseHashServiceTest {
     @Test
     fun calculateHashTest() {
         val dataSourceId = DataSourceId("test-data-source-id")
@@ -46,11 +43,11 @@ internal class DataBaseReaderTest {
                 mapOf("test-query-parameter" to listOf("test-query-parameter-value-a", "test-query-parameter-value-b"))
             ))
         )
-        val dataBaseService = DataBaseServiceImpl(
+        val hashService = BaseHashServiceImpl(
             dataSourceProvider,
             queryProvider
         )
 
-        assertEquals(-1879617647, dataBaseService.calculateHash(dataSourceId, queryId))
+        assertEquals(-1879617647, hashService.calculateHash(dataSourceId, queryId))
     }
 }
