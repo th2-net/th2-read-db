@@ -45,6 +45,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.UnsafeByteOperations
 import com.opencsv.CSVWriterBuilder
 import io.netty.buffer.Unpooled
+import io.netty.util.internal.StringUtil.toHexString
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -268,6 +269,7 @@ private fun Any.toStringValue(): String = when (this) {
     is BigDecimal -> stripTrailingZeros().toPlainString()
     is Double -> toBigDecimal().toStringValue()
     is Float -> toBigDecimal().toStringValue()
+    is ByteArray -> toHexString(this)
     else -> toString()
 }
 
