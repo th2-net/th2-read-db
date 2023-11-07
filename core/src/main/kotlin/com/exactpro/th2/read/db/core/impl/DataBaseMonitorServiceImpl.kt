@@ -68,7 +68,7 @@ class DataBaseMonitorServiceImpl(
                     updateListener.onComplete(dataSourceId)
                 }
             }
-            runningTasks[id] = TaskHolder(job)
+            runningTasks[id] = TaskHolder(job, updateListener)
         }
         LOGGER.info { "Task $id submitted" }
         return id
@@ -154,4 +154,4 @@ class DataBaseMonitorServiceImpl(
     }
 }
 
-private class TaskHolder(val job: Job)
+private class TaskHolder(val job: Job, @Suppress("unused") val updateListener: UpdateListener)
