@@ -182,7 +182,7 @@ spec:
 
 #### Changed:
 
-+ `initQuery` parameter in pull task is optional 
++ `initQuery` parameter in a pull task is made optional
 
 ### 0.3.3
 
