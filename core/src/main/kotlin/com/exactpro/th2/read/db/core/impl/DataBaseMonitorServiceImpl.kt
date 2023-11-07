@@ -97,10 +97,10 @@ class DataBaseMonitorServiceImpl(
         updateQueryId: QueryId,
         updateListener: UpdateListener
     ) {
-        val lastRow: TableRow? = initQueryId?.let {
+        val lastRow: TableRow? = initQueryId?.let { queryId ->
             dataBaseService.executeQuery(
                 dataSourceId,
-                initQueryId,
+                queryId,
                 initParameters,
             ).lastOrNull()
         }
