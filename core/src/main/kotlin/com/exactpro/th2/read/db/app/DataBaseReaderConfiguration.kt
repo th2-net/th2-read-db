@@ -56,7 +56,7 @@ data class ReadTaskConfiguration(
 @JsonTypeName("pull")
 data class PullTaskConfiguration(
     val dataSource: DataSourceId,
-    val initQueryId: QueryId,
+    val initQueryId: QueryId?,
     val initParameters: QueryParametersValues = emptyMap(),
     val updateQueryId: QueryId,
     val useColumns: Set<String> = emptySet(),

@@ -49,14 +49,14 @@ class DataBaseServiceImpl(
         queryId: QueryId,
         parameters: QueryParametersValues,
     ): Flow<TableRow> {
-        LOGGER.info { "Executing query $queryId for $dataSourceId connection" }
+        LOGGER.info { "Executing query $queryId for $dataSourceId connection with $parameters parameters without default" }
         val dataSource: DataSource = dataSourceProvider[dataSourceId]
         val queryHolder: QueryHolder = queriesProvider[queryId]
         val connection = dataSource.connection
         val finalParameters = queryHolder.defaultParameters.toMutableMap().apply {
             putAll(parameters)
         }
-        LOGGER.trace { "Execution parameters: $finalParameters" }
+        LOGGER.trace { "Final execution parameters: $finalParameters" }
         val resultSet: ResultSet = try {
             connection.prepareStatement(queryHolder.query).run {
                 queryHolder.parameters.forEach { (name, typeInfos) ->
