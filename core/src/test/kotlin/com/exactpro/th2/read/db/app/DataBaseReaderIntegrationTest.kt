@@ -93,7 +93,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives data from database`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
-        val messageLoader = mock<MessageLoader> {  }
+        val messageLoader = mock<MessageLoader> { }
         runTest {
             val reader = DataBaseReader.createDataBaseReader(
                 DataBaseReaderConfiguration(
@@ -139,7 +139,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives update from table (with init query)`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
-        val messageLoader = mock<MessageLoader> {  }
+        val messageLoader = mock<MessageLoader> { }
         val interval = Duration.ofMillis(100)
         runTest {
             val reader = DataBaseReader.createDataBaseReader(
@@ -201,6 +201,7 @@ internal class DataBaseReaderIntegrationTest {
     fun `receives update from table (without init query)`(startId: Int) {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
         val interval = Duration.ofMillis(100)
         runTest {
             val reader = DataBaseReader.createDataBaseReader(
@@ -220,7 +221,8 @@ internal class DataBaseReaderIntegrationTest {
                 ),
                 this,
                 genericUpdateListener,
-                genericRowListener
+                genericRowListener,
+                messageLoader
             )
             val listener = mock<UpdateListener> { }
             val taskId = reader.submitPullTask(

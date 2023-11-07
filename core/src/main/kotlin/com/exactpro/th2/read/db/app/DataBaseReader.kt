@@ -184,7 +184,7 @@ class DataBaseReader(
             scope: CoroutineScope,
             pullingListener: UpdateListener,
             rowListener: RowListener,
-            loadLastMessage: MessageLoader,
+            messageLoader: MessageLoader,
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
@@ -198,7 +198,7 @@ class DataBaseReader(
                 scope,
                 pullingListener,
                 rowListener,
-                loadLastMessage,
+                messageLoader,
             )
         }
     }

@@ -36,7 +36,6 @@ import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
 import com.exactpro.th2.common.utils.message.transport.toGroup
 import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
 import com.exactpro.th2.lwdataprovider.MessageSearcher
-import com.exactpro.th2.lwdataprovider.MessageSearcher.Companion.createMessageStream
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
 import com.exactpro.th2.read.db.app.validate
@@ -203,10 +202,11 @@ private fun createMessageLoader(
     MessageSearcher.create(factory.grpcRouter.getService(DataProviderService::class.java)).run {
         MessageLoader { dataSourceId, properties ->
             findLastOrNull(
-                searchInterval = Duration.ofDays(1),
                 book = componentBookName,
                 sessionGroup = dataSourceId.id,
-                messageStreams = hashSetOf(createMessageStream(dataSourceId.id, FIRST)),
+                sessionAlias = dataSourceId.id,
+                direction = FIRST,
+                searchInterval = Duration.ofDays(1),
             ) {
                 properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
             }?.toTableRow()
@@ -249,7 +249,7 @@ private fun <BUILDER: Any> createReader(
             LOGGER.debug { "Storing row from $sourceId. Columns: ${row.columns.keys}" }
             messageQueue.put(row.toMessage(sourceId, emptyMap()))
         },
-        loadLastMessage = loadLastMessage
+        messageLoader = loadLastMessage
     )
     closeResource("reader", reader::close)
     reader.start()
