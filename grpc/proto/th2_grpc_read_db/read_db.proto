@@ -43,7 +43,7 @@ message AssociatedMessageType {
 
 message DbPullRequest {
   SourceId source_id = 1;
-  QueryId init_query_id = 2;
+  optional QueryId init_query_id = 2;
   QueryParameters init_parameters = 3;
   repeated string use_columns = 4;
   QueryId update_query_id = 5;
