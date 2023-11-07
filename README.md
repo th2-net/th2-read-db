@@ -1,4 +1,4 @@
-# th2-read-db 0.3.3
+# th2-read-db 0.3.4
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -87,8 +87,9 @@ The read tasks tries to read all data from the specified data source using speci
 Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
-+ initQueryId - the id of the query that should be used to retrieve the current state of the database
-+ initParameters - the parameters that should be used in the init query
++ initQueryId - the id of the query that should be used to retrieve the current state of the database.
+  NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
++ initParameters - the parameters that should be used in the init query. Also, The task use these parameters to configure the fist `updateQuery` if `initQuery` parameter is missing
 + updateQueryId - the id of the query that should be used to pull updates from the database
 + useColumns - the set of columns that should be used in the update query (the last value from init query and from pull query)
 + updateParameters - the list of parameters that should be used in the update query
@@ -176,6 +177,12 @@ spec:
 ```
 
 ## Changes
+
+### 0.3.4
+
+#### Changed:
+
++ `initQuery` parameter in pull task is optional 
 
 ### 0.3.3
 

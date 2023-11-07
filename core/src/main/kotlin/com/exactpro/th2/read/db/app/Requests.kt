@@ -29,7 +29,7 @@ class ExecuteQueryRequest(
 
 class PullTableRequest(
     val dataSourceId: DataSourceId,
-    val initQueryId: QueryId,
+    val initQueryId: QueryId?,
     val initParameters: QueryParametersValues,
     val useColumns: Set<String>,
     val updateQueryId: QueryId,
