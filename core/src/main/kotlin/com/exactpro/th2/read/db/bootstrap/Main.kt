@@ -17,14 +17,11 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
-import com.exactpro.th2.common.grpc.Direction as ProtoDirection
-import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
-import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
-import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.sessionAlias
+import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.metrics.LIVENESS_MONITOR
 import com.exactpro.th2.common.metrics.READINESS_MONITOR
@@ -44,8 +41,8 @@ import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.UnsafeByteOperations
 import com.opencsv.CSVWriterBuilder
+import io.netty.buffer.ByteBufUtil.hexDump
 import io.netty.buffer.Unpooled
-import io.netty.util.internal.StringUtil.toHexString
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +65,9 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import com.exactpro.th2.common.grpc.Direction as ProtoDirection
+import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
 private val LOGGER = KotlinLogging.logger { }
 
@@ -269,7 +269,7 @@ private fun Any.toStringValue(): String = when (this) {
     is BigDecimal -> stripTrailingZeros().toPlainString()
     is Double -> toBigDecimal().toStringValue()
     is Float -> toBigDecimal().toStringValue()
-    is ByteArray -> toHexString(this)
+    is ByteArray -> hexDump(this)
     else -> toString()
 }
 
