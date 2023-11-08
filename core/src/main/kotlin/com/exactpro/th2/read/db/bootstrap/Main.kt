@@ -39,18 +39,12 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.protobuf.UnsafeByteOperations
-import com.opencsv.CSVWriterBuilder
-import io.netty.buffer.ByteBufUtil.hexDump
-import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
-import java.io.ByteArrayOutputStream
-import java.math.BigDecimal
 import java.time.Instant
 import java.util.Deque
 import java.util.concurrent.ArrayBlockingQueue
@@ -220,57 +214,6 @@ private fun <BUILDER> createReader(
     closeResource("reader", reader::close)
     reader.start()
     return reader
-}
-
-private fun TableRow.toProtoMessage(dataSourceId: DataSourceId): ProtoRawMessage.Builder {
-    return ProtoRawMessage.newBuilder()
-        .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
-        .apply {
-            sessionAlias = dataSourceId.id
-            direction = ProtoDirection.FIRST
-            associatedMessageType?.also {
-                metadataBuilder.putProperties("th2.csv.override_message_type", it)
-            }
-        }
-}
-
-private fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.Builder {
-    val builder = RawMessage.builder()
-        .setBody(Unpooled.wrappedBuffer(toCsvBody()))
-        .apply {
-            idBuilder()
-                .setSessionAlias(dataSourceId.id)
-                .setDirection(Direction.INCOMING)
-        }
-
-    if (associatedMessageType != null) {
-        builder.setMetadata(mapOf("th2.csv.override_message_type" to associatedMessageType))
-    }
-
-    return builder
-}
-
-private fun TableRow.toCsvBody(): ByteArray {
-    return ByteArrayOutputStream().use {
-        CSVWriterBuilder(it.writer())
-            .withSeparator(',')
-            .build().use { writer ->
-                val columnNames = columns.keys.toTypedArray()
-                val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
-                    .toTypedArray()
-                writer.writeNext(columnNames)
-                writer.writeNext(values)
-            }
-        it
-    }.toByteArray()
-}
-
-private fun Any.toStringValue(): String = when (this) {
-    is BigDecimal -> stripTrailingZeros().toPlainString()
-    is Double -> toBigDecimal().toStringValue()
-    is Float -> toBigDecimal().toStringValue()
-    is ByteArray -> hexDump(this)
-    else -> toString()
 }
 
 private fun createScope(closeResource: (name: String, resource: () -> Unit) -> Unit): CoroutineScope {
