@@ -1,4 +1,4 @@
-# th2-read-db 0.3.2
+# th2-read-db 0.3.3
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -176,6 +176,12 @@ spec:
 ```
 
 ## Changes
+
+### 0.3.3
+
+### Fix:
+
++ read-db prints `byte array` as object hash code instead of converting to HEX string  
 
 ### 0.3.2
 

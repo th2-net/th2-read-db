@@ -17,14 +17,11 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
-import com.exactpro.th2.common.grpc.Direction as ProtoDirection
-import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
-import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
-import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.sessionAlias
+import com.exactpro.th2.common.message.sessionGroup
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.metrics.LIVENESS_MONITOR
 import com.exactpro.th2.common.metrics.READINESS_MONITOR
@@ -42,17 +39,12 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.protobuf.UnsafeByteOperations
-import com.opencsv.CSVWriterBuilder
-import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
-import java.io.ByteArrayOutputStream
-import java.math.BigDecimal
 import java.time.Instant
 import java.util.Deque
 import java.util.concurrent.ArrayBlockingQueue
@@ -67,6 +59,9 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import com.exactpro.th2.common.grpc.Direction as ProtoDirection
+import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
 private val LOGGER = KotlinLogging.logger { }
 
@@ -219,56 +214,6 @@ private fun <BUILDER> createReader(
     closeResource("reader", reader::close)
     reader.start()
     return reader
-}
-
-private fun TableRow.toProtoMessage(dataSourceId: DataSourceId): ProtoRawMessage.Builder {
-    return ProtoRawMessage.newBuilder()
-        .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
-        .apply {
-            sessionAlias = dataSourceId.id
-            direction = ProtoDirection.FIRST
-            associatedMessageType?.also {
-                metadataBuilder.putProperties("th2.csv.override_message_type", it)
-            }
-        }
-}
-
-private fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.Builder {
-    val builder = RawMessage.builder()
-        .setBody(Unpooled.wrappedBuffer(toCsvBody()))
-        .apply {
-            idBuilder()
-                .setSessionAlias(dataSourceId.id)
-                .setDirection(Direction.INCOMING)
-        }
-
-    if (associatedMessageType != null) {
-        builder.setMetadata(mapOf("th2.csv.override_message_type" to associatedMessageType))
-    }
-
-    return builder
-}
-
-private fun TableRow.toCsvBody(): ByteArray {
-    return ByteArrayOutputStream().use {
-        CSVWriterBuilder(it.writer())
-            .withSeparator(',')
-            .build().use { writer ->
-                val columnNames = columns.keys.toTypedArray()
-                val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
-                    .toTypedArray()
-                writer.writeNext(columnNames)
-                writer.writeNext(values)
-            }
-        it
-    }.toByteArray()
-}
-
-private fun Any.toStringValue(): String = when (this) {
-    is BigDecimal -> stripTrailingZeros().toPlainString()
-    is Double -> toBigDecimal().toStringValue()
-    is Float -> toBigDecimal().toStringValue()
-    else -> toString()
 }
 
 private fun createScope(closeResource: (name: String, resource: () -> Unit) -> Unit): CoroutineScope {
