@@ -28,14 +28,11 @@ class BaseHashServiceImpl(
     private val dataSourceProvider: DataSourceProvider,
     private val queriesProvider: QueryProvider,
 ) : HashService {
-    override fun dataSourceHash(dataSourceId: DataSourceId): Int = dataSourceProvider.dataSource(dataSourceId).dataSourceHash
-    override fun queryHash(queryId: QueryId): Int = queriesProvider[queryId].queryHash
-
-    companion object {
-        internal fun HashService.calculateHash(dataSourceId: DataSourceId, queryId: QueryId): Int =
-            HashCodeBuilder()
-                .append(dataSourceHash(dataSourceId))
-                .append(queryHash(queryId))
-                .toHashCode()
+    override fun dataSourceHash(dataSourceId: DataSourceId): Int = dataSourceProvider.dataSource(dataSourceId).cfg.hashCode()
+    override fun queryHash(queryId: QueryId): Int = queriesProvider[queryId].let { holder ->
+        HashCodeBuilder()
+            .append(holder.query)
+            .append(holder.defaultParameters)
+            .toHashCode()
     }
 }

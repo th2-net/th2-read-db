@@ -18,4 +18,4 @@ package com.exactpro.th2.read.db.core
 
 import javax.sql.DataSource
 
-data class DataSourceHolder(val dataSource: DataSource, val dataSourceHash: Int)
+data class DataSourceHolder(val dataSource: DataSource, val cfg: DataSourceConfiguration)

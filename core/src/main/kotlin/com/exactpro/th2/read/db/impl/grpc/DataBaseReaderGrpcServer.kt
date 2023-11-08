@@ -71,6 +71,7 @@ class DataBaseReaderGrpcServer(
                 request.run {
                     PullTableRequest(
                         sourceId.toModel(),
+                        loadPreviousState,
                         if (hasInitQueryId()) initQueryId.toModel() else null,
                         initParameters.toModel(),
                         useColumnsList.toSet(),

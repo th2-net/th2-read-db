@@ -16,7 +16,6 @@
 
 package com.exactpro.th2.read.db.core
 
-import org.apache.commons.lang3.builder.HashCodeBuilder
 import java.sql.SQLType
 
 data class QueryHolder(
@@ -24,12 +23,7 @@ data class QueryHolder(
     val parameters: Map<String, List<ParameterInfo>>,
     val defaultParameters: QueryParametersValues,
     val associatedMessageType: String? = null,
-) {
-    val queryHash: Int = HashCodeBuilder()
-        .append(query)
-        .append(defaultParameters)
-        .toHashCode()
-}
+)
 
 data class ParameterInfo(
     val index: Int,

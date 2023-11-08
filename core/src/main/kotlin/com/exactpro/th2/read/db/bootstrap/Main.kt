@@ -203,7 +203,6 @@ private fun createMessageLoader(
         MessageLoader { dataSourceId, properties ->
             findLastOrNull(
                 book = componentBookName,
-                sessionGroup = dataSourceId.id,
                 sessionAlias = dataSourceId.id,
                 direction = FIRST,
                 searchInterval = Duration.ofDays(1),
@@ -218,7 +217,7 @@ private fun createMessageLoader(
     }
 }.onSuccess {
     LOGGER.info { "Loading message from a data-provider is enabled" }
-}.getOrNull() ?: MessageLoader.NULL_RESULT
+}.getOrNull() ?: MessageLoader.DISABLED
 
 private fun <BUILDER: Any> createReader(
     cfg: DataBaseReaderConfiguration,

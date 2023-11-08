@@ -22,6 +22,7 @@ import java.time.Duration
 interface DataBaseMonitorService : AutoCloseable {
     fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
+        loadPreviousState: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -33,4 +34,8 @@ interface DataBaseMonitorService : AutoCloseable {
     ) : TaskId
 
     suspend fun cancelTask(id: TaskId)
+
+    companion object {
+        internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
+    }
 }

@@ -36,7 +36,7 @@ class BaseDataSourceProvider(
                 cfg.properties.forEach { (key, value) -> addConnectionProperty(key, value) }
                 LOGGER.trace { "Data source for $id created" }
             },
-            cfg.hashCode()
+            cfg
         )
     }
 

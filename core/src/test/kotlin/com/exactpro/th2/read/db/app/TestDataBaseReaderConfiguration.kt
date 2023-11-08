@@ -101,6 +101,7 @@ internal class TestDataBaseReaderConfiguration {
                 {
                   "type": "pull",
                   "dataSource": "test",
+                  "loadPreviousState": true,
                   "initQueryId": "test_query",
                   "initParameters": {
                     "param1": ["value1"]
@@ -156,6 +157,7 @@ internal class TestDataBaseReaderConfiguration {
                         .isEqualTo(
                             PullTaskConfiguration(
                                 dataSource,
+                                true,
                                 queryId,
                                 mapOf(
                                     "param1" to listOf("value1")

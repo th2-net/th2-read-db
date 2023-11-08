@@ -34,6 +34,7 @@ startupTasks:
     - Ivan
 - type: pull
   dataSource: persons
+  loadPreviousState: false
   initQueryId: current_state
   updateQueryId: updates
   useColumns:
@@ -87,6 +88,7 @@ The read tasks tries to read all data from the specified data source using speci
 Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
++ loadPreviousState - task tries to load previous state via `data-provider` if this option is enabled 
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
 + initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
@@ -110,9 +112,11 @@ Message might contain property `th2.csv.override_message_type` with value that s
 
 This type of task work by the algorithm:
 
-1) try to load the last message with `th2.pull_task.update_hash` property published to Cradle if you connect read-db to a data-provider [Go to gRPC client configuration](#client)
-2) if read-db isn't connected to a data-provider or no one message hasn't been published into Cradle, the task execute init query.
-3) this task executes update query with specified `interval`
+1) task tris to load the last message with `th2.pull_task.update_hash` property published to Cradle if loadPreviousState is `true`.
+   NOTE: if read-db isn't connected to a data-provider [Go to gRPC client configuration](#client), the task failure 
+2) if loadPreviousState is `false` or no one message hasn't been published into Cradle, task tries to execute init query.
+3) if init query is `null`, task uses `initProperties` as init values
+4) task executes update query with specified `interval` and parameters loaded from one of previous steps 
 
 Pull task send all messages loaded from database via a pin with 'transport-group', 'publish' attributes. 
 Each message has `th2.pull_task.update_hash` property calculated by source and query configurations. 
@@ -235,6 +239,7 @@ spec:
             - Ivan
       - type: pull
         dataSource: persons
+        loadPreviousState: false
         initQueryId: current_state
         updateQueryId: updates
         useColumns:
@@ -283,7 +288,9 @@ spec:
 #### Feature:
 
 + pull task optionally loads the last message for initialisation from a data-provider via gRPC
-+ updated common: `5.7.0-dev`
+
+#### Update:
++ common: `5.7.0-dev`
 
 #### Changed:
 

@@ -18,15 +18,16 @@ package com.exactpro.th2.read.db.core.impl
 
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
+import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.HashService
+import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
 import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.TaskId
 import com.exactpro.th2.read.db.core.UpdateListener
-import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl.Companion.calculateHash
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -52,6 +53,7 @@ class DataBaseMonitorServiceImpl(
 
     override fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
+        loadPreviousState: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -70,6 +72,7 @@ class DataBaseMonitorServiceImpl(
                 try {
                     poolUpdates(
                         dataSourceId,
+                        loadPreviousState,
                         initQueryId,
                         initParameters,
                         useColumns,
@@ -104,6 +107,7 @@ class DataBaseMonitorServiceImpl(
 
     private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
+        loadPreviousState: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -117,14 +121,18 @@ class DataBaseMonitorServiceImpl(
             TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, updateQueryId).toString()
         )
 
-        val lastRow: TableRow? = messageLoader.load(dataSourceId, properties)
-            ?: initQueryId?.let { queryId ->
-                dataBaseService.executeQuery(
-                    dataSourceId,
-                    queryId,
-                    initParameters,
-                ).lastOrNull()
-            }
+        val lastRow: TableRow? = when(loadPreviousState) {
+            true -> messageLoader.load(dataSourceId, properties)
+            else -> null
+        } ?: initQueryId?.let { queryId ->
+            dataBaseService.executeQuery(
+                dataSourceId,
+                queryId,
+                initParameters,
+            ).lastOrNull()
+        }
+
+
 
         fun updateParameters(lastRow: TableRow): QueryParametersValues {
             return useColumns.associateWith {
@@ -161,8 +169,6 @@ class DataBaseMonitorServiceImpl(
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
-
-        internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
     }
 
     override fun close() {

@@ -20,7 +20,7 @@ import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.exactpro.th2.read.db.core.QueryId
-import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl.Companion.calculateHash
+import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

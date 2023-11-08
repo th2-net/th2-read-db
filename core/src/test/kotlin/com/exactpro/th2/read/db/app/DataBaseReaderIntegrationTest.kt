@@ -18,8 +18,11 @@ package com.exactpro.th2.read.db.app
 
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.containers.MySqlContainer
+import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
+import com.exactpro.th2.read.db.core.HashService
+import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
 import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.exactpro.th2.read.db.core.QueryId
@@ -27,7 +30,9 @@ import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
-import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
+import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
+import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
+import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
@@ -45,7 +50,11 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.same
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -169,6 +178,7 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
+                    false,
                     QueryId("current_state"),
                     emptyMap(),
                     setOf("id"),
@@ -189,6 +199,7 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(newData)
             listener.assertCaptured(newData)
+            verify(messageLoader, never()).load(any(), any())
             verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 
@@ -228,6 +239,7 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
+                    false,
                     null,
                     mapOf("id" to listOf(startId.toString())),
                     setOf("id"),
@@ -250,6 +262,88 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(pulledData)
             listener.assertCaptured(pulledData)
+            verify(messageLoader, never()).load(any(), any())
+            verifyNoInteractions(genericRowListener)
+            reader.stopPullTask(taskId)
+
+            advanceUntilIdle()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [1, 15, 30])
+    fun `receives update from table (message loader request)`(startId: Int) {
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> {
+            on { load(any(), any()) }.thenReturn(persons[startId - 1].toTableRow(startId))
+        }
+        val interval = Duration.ofMillis(100)
+
+        val dataSourceId = DataSourceId("persons")
+        val queryId = QueryId("updates")
+        val configuration = DataBaseReaderConfiguration(
+            mapOf(
+                dataSourceId to DataSourceConfiguration(
+                    mysql.jdbcUrl,
+                    mysql.username,
+                    mysql.password,
+                )
+            ),
+            mapOf(
+                queryId to QueryConfiguration(
+                    "SELECT * FROM test_data.person WHERE id > \${id:integer}"
+                )
+            )
+        )
+        val hashService: HashService = BaseHashServiceImpl(
+            BaseDataSourceProvider(configuration.dataSources),
+            BaseQueryProvider(configuration.queries)
+        )
+
+        runTest {
+            val reader = spy(DataBaseReader.createDataBaseReader(
+                configuration,
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader
+            ))
+            val listener = mock<UpdateListener> { }
+            val taskId = reader.submitPullTask(
+                PullTableRequest(
+                    dataSourceId,
+                    true,
+                    null,
+                    emptyMap(),
+                    setOf("id"),
+                    queryId,
+                    emptyMap(),
+                    interval,
+                ),
+                listener,
+            )
+
+            advanceTimeBy(interval.toMillis())
+
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
+            insertData(newData)
+
+            val pulledData = (persons + newData).drop(startId)
+
+            advanceTimeBy(interval.toMillis() * 2)
+            delay(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(pulledData)
+            listener.assertCaptured(pulledData)
+            verify(messageLoader).load(
+                same(dataSourceId),
+                eq(
+                    mapOf(
+                        TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, queryId).toString()
+                    )
+                )
+            )
             verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 
@@ -338,6 +432,14 @@ internal class DataBaseReaderIntegrationTest {
         }
         prepareStatement.executeBatch()
     }
+
+    private fun Person.toTableRow(id: Int): TableRow = TableRow(
+        mapOf(
+            "id" to id,
+            "name" to name,
+            "birthday" to birthday.toString()
+        )
+    )
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }

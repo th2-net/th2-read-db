@@ -16,7 +16,16 @@
 
 package com.exactpro.th2.read.db.core
 
+import org.apache.commons.lang3.builder.HashCodeBuilder
+
 interface HashService {
     fun dataSourceHash(dataSourceId: DataSourceId): Int
     fun queryHash(queryId: QueryId): Int
+    companion object {
+        internal fun HashService.calculateHash(dataSourceId: DataSourceId, queryId: QueryId): Int =
+            HashCodeBuilder()
+                .append(dataSourceHash(dataSourceId))
+                .append(queryHash(queryId))
+                .toHashCode()
+    }
 }

@@ -27,6 +27,6 @@ fun interface MessageLoader {
 
     companion object {
         @JvmField
-        val NULL_RESULT = MessageLoader { _, _ -> null }
+        val DISABLED = MessageLoader { _, _ -> error("Message loader doesn't configured to execute request") }
     }
 }
