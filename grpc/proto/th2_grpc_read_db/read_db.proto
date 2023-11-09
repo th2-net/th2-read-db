@@ -50,7 +50,7 @@ message DbPullRequest {
   QueryParameters update_parameters = 6;
   google.protobuf.Duration pull_interval = 7;
   AssociatedMessageType associated_message_type = 8;
-  bool load_previous_state = 9;
+  bool start_from_last_read_row = 9;
 }
 
 message PullTaskId {

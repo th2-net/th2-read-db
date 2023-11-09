@@ -101,7 +101,7 @@ internal class TestDataBaseReaderConfiguration {
                 {
                   "type": "pull",
                   "dataSource": "test",
-                  "loadPreviousState": true,
+                  "startFromLastReadRow": true,
                   "initQueryId": "test_query",
                   "initParameters": {
                     "param1": ["value1"]

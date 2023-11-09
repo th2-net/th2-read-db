@@ -53,7 +53,7 @@ class DataBaseMonitorServiceImpl(
 
     override fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
-        loadPreviousState: Boolean,
+        startFromLastReadRow: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -72,7 +72,7 @@ class DataBaseMonitorServiceImpl(
                 try {
                     poolUpdates(
                         dataSourceId,
-                        loadPreviousState,
+                        startFromLastReadRow,
                         initQueryId,
                         initParameters,
                         useColumns,
@@ -107,7 +107,7 @@ class DataBaseMonitorServiceImpl(
 
     private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
-        loadPreviousState: Boolean,
+        startFromLastReadRow: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -121,7 +121,7 @@ class DataBaseMonitorServiceImpl(
             TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, updateQueryId).toString()
         )
 
-        val lastRow: TableRow? = when(loadPreviousState) {
+        val lastRow: TableRow? = when(startFromLastReadRow) {
             true -> messageLoader.load(dataSourceId, properties)
             else -> null
         } ?: initQueryId?.let { queryId ->

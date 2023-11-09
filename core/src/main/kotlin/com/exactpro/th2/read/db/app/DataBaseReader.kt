@@ -66,7 +66,7 @@ class DataBaseReader(
                     LOGGER.info { "Launching pull task from ${task.dataSource} with ${task.initQueryId} init query and ${task.updateQueryId} update query" }
                     scope.submitTask(
                         task.dataSource,
-                        task.loadPreviousState,
+                        task.startFromLastReadRow,
                         task.initQueryId,
                         task.initParameters,
                         task.useColumns,
@@ -112,7 +112,7 @@ class DataBaseReader(
             with(request) {
                 scope.submitTask(
                     dataSourceId,
-                    loadPreviousState,
+                    startFromLastReadRow,
                     initQueryId,
                     initParameters,
                     useColumns,

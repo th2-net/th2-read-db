@@ -9,4 +9,4 @@ You can:
 # Release notes:
 
 ## 0.0.4
-+ added DbPullRequest.load_previous_state field
++ added DbPullRequest.start_from_last_read_row field

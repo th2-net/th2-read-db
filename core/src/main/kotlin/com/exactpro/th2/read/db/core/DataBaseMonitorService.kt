@@ -22,7 +22,7 @@ import java.time.Duration
 interface DataBaseMonitorService : AutoCloseable {
     fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
-        loadPreviousState: Boolean,
+        startFromLastReadRow: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
