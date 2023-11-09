@@ -297,6 +297,18 @@ spec:
 
 + `initQuery` parameter in a pull task is made optional
 
+### 0.3.4
+
+#### Changed:
+
++ `initQuery` parameter in a pull task is made optional
+
+### 0.3.3
+
+### Fix:
+
++ read-db prints `byte array` as object hash code instead of converting to HEX string  
+
 ### 0.3.2
 
 #### Changed:

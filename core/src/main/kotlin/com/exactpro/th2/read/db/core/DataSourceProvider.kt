@@ -16,8 +16,6 @@
 
 package com.exactpro.th2.read.db.core
 
-import javax.sql.DataSource
-
 interface DataSourceProvider {
     /**
      * Returns [DataSourceHolder] for specified [dataSourceId] or throws an exception

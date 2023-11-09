@@ -132,8 +132,6 @@ class DataBaseMonitorServiceImpl(
             ).lastOrNull()
         }
 
-
-
         fun updateParameters(lastRow: TableRow): QueryParametersValues {
             return useColumns.associateWith {
                 val value = lastRow.columns[it] ?: error("Missing required parameter $it from init query result $lastRow")

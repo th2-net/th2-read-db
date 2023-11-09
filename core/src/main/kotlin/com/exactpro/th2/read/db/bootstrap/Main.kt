@@ -45,8 +45,6 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.protobuf.UnsafeByteOperations
-import io.netty.buffer.Unpooled
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,10 +70,7 @@ import com.exactpro.th2.common.grpc.Direction as ProtoDirection
 import com.exactpro.th2.common.grpc.MessageGroupBatch as ProtoMessageGroupBatch
 import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
-
 private val LOGGER = KotlinLogging.logger { }
-
-internal const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
 
 fun main(args: Array<String>) {
     LOGGER.info { "Starting the read-db service" }
@@ -253,36 +248,6 @@ private fun <BUILDER: Any> createReader(
     closeResource("reader", reader::close)
     reader.start()
     return reader
-}
-
-private fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<String, String>): ProtoRawMessage.Builder {
-    return ProtoRawMessage.newBuilder()
-        .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
-        .apply {
-            sessionAlias = dataSourceId.id
-            direction = FIRST
-            associatedMessageType?.also {
-                metadataBuilder.putProperties(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, it)
-            }
-            metadataBuilder.putAllProperties(properties)
-        }
-}
-
-private fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties: Map<String, String>): RawMessage.Builder {
-    val builder = RawMessage.builder()
-        .setBody(Unpooled.wrappedBuffer(toCsvBody()))
-        .apply {
-            idBuilder()
-                .setSessionAlias(dataSourceId.id)
-                .setDirection(Direction.INCOMING)
-        }
-
-    if (associatedMessageType != null) {
-        builder.addMetadataProperty(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, associatedMessageType)
-    }
-    properties.forEach(builder::addMetadataProperty)
-
-    return builder
 }
 
 private fun createScope(closeResource: (name: String, resource: () -> Unit) -> Unit): CoroutineScope {

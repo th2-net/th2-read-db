@@ -60,6 +60,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
+import java.io.ByteArrayInputStream
 import java.sql.Connection
 import java.sql.Date
 import java.time.Duration
@@ -74,10 +75,30 @@ import java.time.temporal.ChronoUnit
 internal class DataBaseReaderIntegrationTest {
     private val mysql = MySqlContainer()
     private val persons = (1..30).map {
-        Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS))
+        Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
     }
 
-    private data class Person(val name: String, val birthday: Instant)
+    private data class Person(val name: String, val birthday: Instant, val data: ByteArray) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Person
+
+            if (name != other.name) return false
+            if (birthday != other.birthday) return false
+            if (!data.contentEquals(other.data)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = name.hashCode()
+            result = 31 * result + birthday.hashCode()
+            result = 31 * result + data.contentHashCode()
+            return result
+        }
+    }
 
     @BeforeAll
     fun init() {
@@ -191,7 +212,7 @@ internal class DataBaseReaderIntegrationTest {
 
             advanceTimeBy(interval.toMillis())
 
-            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
             insertData(newData)
 
             advanceTimeBy(interval.toMillis() * 2)
@@ -252,7 +273,7 @@ internal class DataBaseReaderIntegrationTest {
 
             advanceTimeBy(interval.toMillis())
 
-            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
             insertData(newData)
 
             val pulledData = (persons + newData).drop(startId)
@@ -326,7 +347,7 @@ internal class DataBaseReaderIntegrationTest {
 
             advanceTimeBy(interval.toMillis())
 
-            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
             insertData(newData)
 
             val pulledData = (persons + newData).drop(startId)
@@ -359,6 +380,7 @@ internal class DataBaseReaderIntegrationTest {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
                 (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
+                (checkNotNull(it.columns["data"]) as ByteArray),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -375,6 +397,7 @@ internal class DataBaseReaderIntegrationTest {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
                 (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
+                (checkNotNull(it.columns["data"]) as ByteArray),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -393,6 +416,7 @@ internal class DataBaseReaderIntegrationTest {
                       `id` INT NOT NULL AUTO_INCREMENT,
                       `name` VARCHAR(45) NOT NULL,
                       `birthday` DATE NOT NULL,
+                      `data` BLOB NOT NULL,
                       PRIMARY KEY (`id`));
                 """.trimIndent()
             )
@@ -420,14 +444,15 @@ internal class DataBaseReaderIntegrationTest {
     private fun Connection.insertData(persons: List<Person>) {
         val prepareStatement = prepareStatement(
             """
-                        INSERT INTO `test_data`.`person` (`name`, `birthday`)
+                        INSERT INTO `test_data`.`person` (`name`, `birthday`, `data`)
                         VALUES
-                        (?, ?);
+                        (?, ?, ?);
                     """.trimIndent()
         )
         for (person in persons) {
             prepareStatement.setString(1, person.name)
             prepareStatement.setDate(2, Date(person.birthday.toEpochMilli()))
+            prepareStatement.setBlob(3, ByteArrayInputStream(person.data))
             prepareStatement.addBatch()
         }
         prepareStatement.executeBatch()
