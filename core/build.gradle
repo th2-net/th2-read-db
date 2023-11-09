@@ -40,7 +40,7 @@ dependencies {
     api platform("com.exactpro.th2:bom:4.5.0")
     implementation "com.exactpro.th2:common:5.7.1-th2-5122-6799620908-06aeffc-SNAPSHOT"
     implementation "com.exactpro.th2:common-utils:2.2.0-dev"
-    implementation "com.exactpro.th2:lw-data-provider-utils:0.0.1-TH2-5119-0f9550c-SNAPSHOT"
+    implementation "com.exactpro.th2:lw-data-provider-utils:0.0.1-TH2-5119-c609b13-SNAPSHOT"
 
     implementation "org.slf4j:slf4j-api"
 
