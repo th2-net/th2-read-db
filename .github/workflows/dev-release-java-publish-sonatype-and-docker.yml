@@ -129,7 +129,7 @@ jobs:
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
     needs:
       - build-and-publish-core-java
-      - app-versions
+      - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
