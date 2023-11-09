@@ -98,7 +98,9 @@ jobs:
     needs:
       - build-and-publish-grpc-java
       - changes
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true' }}
+    if: |
+      always() &&
+      (needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true')
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 'zulu' '11'
@@ -125,12 +127,13 @@ jobs:
 
   publish-docker:
     name: Build and publish docker image
-    if: |
-      always() &&
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
     needs:
       - build-and-publish-core-java
       - app-version
+      - changes
+    if: |
+      always() &&
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
