@@ -290,7 +290,8 @@ spec:
 + pull task optionally loads the last message for initialisation from a data-provider via gRPC
 
 #### Update:
-+ common: `5.7.0-dev`
++ common: `5.7.1-dev`
++ grpc-service-generator: `3.5.1`
 
 #### Changed:
 
