@@ -251,7 +251,7 @@ internal class DataBaseReaderIntegrationTest {
 
             advanceTimeBy(interval.toMillis())
 
-            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS)) }
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
             insertData(newData)
 
             val pulledData = (persons + newData).drop(startId)
