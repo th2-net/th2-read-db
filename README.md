@@ -88,7 +88,7 @@ The read tasks tries to read all data from the specified data source using speci
 Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
-+ startFromLastReadRow - task tries to load previous state via `data-provider` if this option is enabled 
++ startFromLastReadRow - task tries to load previous state via `data-provider` if this option is `true` 
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
 + initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
@@ -96,6 +96,21 @@ Pulls updates from the specified data source using the specified queries.
 + useColumns - the set of columns that should be used in the update query (the last value from init query and from pull query)
 + updateParameters - the list of parameters that should be used in the update query
 + interval - the interval in millis to pull updates
+
+##### behaviour
+
+This type of task work by the algorithm:
+
+1) Initialize parameters for the first `updateQuery`
+   * task tris to load the last message with `th2.pull_task.update_hash` property published to Cradle if startFromLastReadRow is `true`.<br>
+   NOTE: if read-db isn't connected to a data-provider [Go to gRPC client configuration](#client), the task failures.
+   * if `startFromLastReadRow` is `false` or no one message hasn't been published into Cradle by related session alias, task tries to execute init query.
+   * if init query is `null`, task uses `initProperties` to initialize property for the first `updateQuery` run.<br>
+   NOTE: if `initProperties` doesn't defined, the first `updateQuery` is run with `NULL` value for all used parameters
+2) task periodically executes `updateQuery` with parameters specified in `updateParameters` option and parameters initialised on the previous step.
+
+Pull task send all messages loaded from database via pins with `transport-group`, `publish` attributes for the transport mode and `raw`, `publish` for protobuf mode.
+Each message has `th2.pull_task.update_hash` property calculated by source and query configurations.
 
 # Interaction
 
@@ -105,21 +120,6 @@ You can interact with read-db via gRPC. It supports executing direct queries and
 
 The read-db publishes all extracted data to MQ as raw messages in CSV format. The alias matches the **data source id**.
 Message might contain property `th2.csv.override_message_type` with value that should be used as message type for the row message
-
-# Tasks
-
-## Pull
-
-This type of task work by the algorithm:
-
-1) task tris to load the last message with `th2.pull_task.update_hash` property published to Cradle if startFromLastReadRow is `true`.
-   NOTE: if read-db isn't connected to a data-provider [Go to gRPC client configuration](#client), the task failure 
-2) if startFromLastReadRow is `false` or no one message hasn't been published into Cradle, task tries to execute init query.
-3) if init query is `null`, task uses `initProperties` as init values
-4) task executes update query with specified `interval` and parameters loaded from one of previous steps 
-
-Pull task send all messages loaded from database via a pin with 'transport-group', 'publish' attributes. 
-Each message has `th2.pull_task.update_hash` property calculated by source and query configurations. 
 
 # gRPC
 
@@ -292,6 +292,7 @@ spec:
 #### Update:
 + common: `5.7.1-dev`
 + grpc-service-generator: `3.5.1`
++ grpc-read-db: `0.0.4`
 
 #### Changed:
 
