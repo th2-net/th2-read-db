@@ -20,7 +20,7 @@ targetCompatibility = 11
 ext {
     grpcVersion         = '1.56.0'
     protobufVersion     = '3.24.3' // The protoc:3.23.3 https://github.com/protocolbuffers/protobuf/issues/13070
-    serviceGeneratorVersion = '3.5.1-th2-5122-6799578625-eec161e-SNAPSHOT'
+    serviceGeneratorVersion = '3.5.1'
     grpcCommonVersion = '4.3.0-dev'
 
     genBaseDir = file("${buildDir}/generated/source/proto") // from protobuf plugin
