@@ -56,7 +56,7 @@ data class ReadTaskConfiguration(
 @JsonTypeName("pull")
 data class PullTaskConfiguration(
     val dataSource: DataSourceId,
-    val initQueryId: QueryId,
+    val initQueryId: QueryId?,
     val initParameters: QueryParametersValues = emptyMap(),
     val updateQueryId: QueryId,
     val useColumns: Set<String> = emptySet(),
@@ -75,14 +75,13 @@ fun DataBaseReaderConfiguration.validate(): List<String> {
     }
 }
 
-@OptIn(ExperimentalStdlibApi::class)
 private fun PullTaskConfiguration.validate(index: Int, sourceIDs: Set<DataSourceId>, queryIDs: Set<QueryId>): Collection<String> {
     return buildList {
         if (dataSource !in sourceIDs) {
             add("Unknown $dataSource in pull task at index $index. Known sources: $sourceIDs")
         }
 
-        if (initQueryId !in queryIDs) {
+        if (initQueryId != null && initQueryId !in queryIDs) {
             add("Unknown init query $initQueryId in pull task at index $index. Known queries: $queryIDs")
         }
 
@@ -92,7 +91,6 @@ private fun PullTaskConfiguration.validate(index: Int, sourceIDs: Set<DataSource
     }
 }
 
-@OptIn(ExperimentalStdlibApi::class)
 private fun ReadTaskConfiguration.validate(index: Int, sourceIDs: Set<DataSourceId>, queryIDs: Set<QueryId>): Collection<String> {
     return buildList {
         if (dataSource !in sourceIDs) {

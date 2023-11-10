@@ -43,6 +43,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -149,7 +151,7 @@ internal class DataBaseReaderIntegrationTest {
     }
 
     @Test
-    fun `receives update from table`() {
+    fun `receives update from table (with init query)`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
         val interval = Duration.ofMillis(100)
@@ -200,6 +202,65 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(newData)
             listener.assertCaptured(newData)
+            verifyNoInteractions(genericRowListener)
+            reader.stopPullTask(taskId)
+
+            advanceUntilIdle()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [0, 10, 30, 35, 50])
+    fun `receives update from table (without init query)`(startId: Int) {
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val interval = Duration.ofMillis(100)
+        runTest {
+            val reader = DataBaseReader.createDataBaseReader(
+                DataBaseReaderConfiguration(
+                    mapOf(
+                        DataSourceId("persons") to DataSourceConfiguration(
+                            mysql.jdbcUrl,
+                            mysql.username,
+                            mysql.password,
+                        )
+                    ),
+                    mapOf(
+                        QueryId("updates") to QueryConfiguration(
+                            "SELECT * FROM test_data.person WHERE id > \${id:integer}"
+                        )
+                    )
+                ),
+                this,
+                genericUpdateListener,
+                genericRowListener
+            )
+            val listener = mock<UpdateListener> { }
+            val taskId = reader.submitPullTask(
+                PullTableRequest(
+                    DataSourceId("persons"),
+                    null,
+                    mapOf("id" to listOf(startId.toString())),
+                    setOf("id"),
+                    QueryId("updates"),
+                    emptyMap(),
+                    interval,
+                ),
+                listener,
+            )
+
+            advanceTimeBy(interval.toMillis())
+
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
+            insertData(newData)
+
+            val pulledData = (persons + newData).drop(startId)
+
+            advanceTimeBy(interval.toMillis() * 2)
+            delay(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(pulledData)
+            listener.assertCaptured(pulledData)
             verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 

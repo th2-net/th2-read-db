@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ class DataBaseMonitorServiceImpl(
 
     override fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
-        initQueryId: QueryId,
+        initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateQueryId: QueryId,
@@ -89,7 +89,7 @@ class DataBaseMonitorServiceImpl(
 
     private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
-        initQueryId: QueryId,
+        initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateParameters: QueryParametersValues,
@@ -97,11 +97,13 @@ class DataBaseMonitorServiceImpl(
         updateQueryId: QueryId,
         updateListener: UpdateListener
     ) {
-        val lastRow: TableRow? = dataBaseService.executeQuery(
-            dataSourceId,
-            initQueryId,
-            initParameters,
-        ).lastOrNull()
+        val lastRow: TableRow? = initQueryId?.let { queryId ->
+            dataBaseService.executeQuery(
+                dataSourceId,
+                queryId,
+                initParameters,
+            ).lastOrNull()
+        }
 
         fun updateParameters(lastRow: TableRow): QueryParametersValues {
             return useColumns.associateWith {
@@ -111,7 +113,7 @@ class DataBaseMonitorServiceImpl(
         }
 
         val finalParameters: MutableMap<String, Collection<String>> = if (lastRow == null) {
-            updateParameters.toMutableMap()
+            updateParameters.toMutableMap().apply { putAll(initParameters) }
         } else {
             updateParameters.toMutableMap().apply { putAll(updateParameters(lastRow)) }
         }
@@ -152,4 +154,4 @@ class DataBaseMonitorServiceImpl(
     }
 }
 
-private class TaskHolder(val job: Job, val updateListener: UpdateListener)
+private class TaskHolder(val job: Job, @Suppress("unused") val updateListener: UpdateListener)
