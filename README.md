@@ -287,16 +287,14 @@ spec:
 
 #### Feature:
 
+#### Changed:
+
 + pull task optionally loads the last message for initialisation from a data-provider via gRPC
 
 #### Update:
 + common: `5.7.1-dev`
 + grpc-service-generator: `3.5.1`
 + grpc-read-db: `0.0.4`
-
-#### Changed:
-
-+ `initQuery` parameter in a pull task is made optional
 
 ### 0.3.4
 
