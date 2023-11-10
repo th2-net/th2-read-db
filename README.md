@@ -1,4 +1,4 @@
-# th2-read-db 0.3.4
+# th2-read-db 0.4.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -34,6 +34,7 @@ startupTasks:
     - Ivan
 - type: pull
   dataSource: persons
+  startFromLastReadRow: false
   initQueryId: current_state
   updateQueryId: updates
   useColumns:
@@ -87,6 +88,7 @@ The read tasks tries to read all data from the specified data source using speci
 Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
++ startFromLastReadRow - task tries to load previous state via `data-provider` if this option is `true` 
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
 + initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
@@ -95,6 +97,20 @@ Pulls updates from the specified data source using the specified queries.
 + updateParameters - the list of parameters that should be used in the update query
 + interval - the interval in millis to pull updates
 
+##### behaviour
+
+This type of task work by the algorithm:
+
+1) Initialize parameters for the first `updateQuery`
+   * task tris to load the last message with `th2.pull_task.update_hash` property published to Cradle if startFromLastReadRow is `true`.<br>
+   NOTE: if read-db isn't connected to a data-provider [Go to gRPC client configuration](#client), the task failures.
+   * if `startFromLastReadRow` is `false` or no one message hasn't been published into Cradle by related session alias, task tries to execute init query.
+   * if init query is `null`, task uses `initProperties` to initialize property for the first `updateQuery` run.<br>
+   NOTE: if `initProperties` doesn't defined, the first `updateQuery` is run with `NULL` value for all used parameters
+2) task periodically executes `updateQuery` with parameters specified in `updateParameters` option and parameters initialised on the previous step.
+
+Pull task send all messages loaded from database via pins with `transport-group`, `publish` attributes for the transport mode and `raw`, `publish` for protobuf mode.
+Each message has `th2.pull_task.update_hash` property calculated by source and query configurations.
 
 # Interaction
 
@@ -105,8 +121,15 @@ You can interact with read-db via gRPC. It supports executing direct queries and
 The read-db publishes all extracted data to MQ as raw messages in CSV format. The alias matches the **data source id**.
 Message might contain property `th2.csv.override_message_type` with value that should be used as message type for the row message
 
-# CR example
+# gRPC
 
+## Client
+
+Pull task tries to load the last message published to Cradle instead of initialise from the start 
+if you connect read-db to a data-provider using `com.exactpro.th2.dataprovider.lw.grpc.DataProviderService`. 
+
+# CR example
+## infra 1
 ```yaml
 apiVersion: th2.exactpro.com/v1
 kind: Th2Box
@@ -154,6 +177,9 @@ spec:
       maxBatchSize: 100
     useTransport: true
   pins:
+    - name: client
+      connection-type: grpc-client
+      service-class: com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
     - name: server
       connection-type: grpc-server
       service-classes:
@@ -176,7 +202,101 @@ spec:
         cpu: 50m
 ```
 
+## infra 2
+```yaml
+apiVersion: th2.exactpro.com/v2
+kind: Th2Box
+metadata:
+  name: read-db
+spec:
+  imageName: ghcr.io/th2-net/th2-read-db
+  imageVersion: 0.0.1
+  type: th2-read
+  customConfig:
+    dataSources:
+      persons:
+        url: "jdbc:mysql://192.168.0.1:3306/people"
+        username: user
+        password: pwd
+        properties:
+          prop1: value1
+    queries:
+      all:
+        query: "SELECT * FROM person WHERE birthday > ${birthday:date};"
+        defaultParameters:
+          birthday:
+            - 1996-01-31
+      current_state:
+        query: "SELECT * FROM person ORDER BY id DESC LIMIT 1;"
+      updates:
+        query: "SELECT * FROM person WHERE id > ${id:integer};"
+    startupTasks:
+      - type: read
+        dataSource: persons
+        queryId: all
+        parameters:
+          name:
+            - Ivan
+      - type: pull
+        dataSource: persons
+        startFromLastReadRow: false
+        initQueryId: current_state
+        updateQueryId: updates
+        useColumns:
+          - id
+        interval: 1000
+    publication:
+      queueSize: 1000
+      maxDelayMillis: 1000
+      maxBatchSize: 100
+    useTransport: true
+  pins:
+    mq:
+      publishers:
+        - name: store
+          attributes: ['transport-group', 'publish', 'store']
+    grpc:
+      client:
+        - name: to_data_provider
+          serviceClass: com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
+          linkTo:
+            - box: lw-data-provider
+              pin: server
+      server:
+        - name: server
+          serviceClasses:
+            - com.exactpro.th2.read.db.grpc.ReadDbService
+            - th2.read_db.ReadDbService
+  extendedSettings:
+    service:
+      enabled: false
+    envVariables:
+      JAVA_TOOL_OPTIONS: "-XX:+ExitOnOutOfMemoryError"
+    resources:
+      limits:
+        memory: 500Mi
+        cpu: 600m
+      requests:
+        memory: 100Mi
+        cpu: 50m
+```
+
 ## Changes
+
+### 0.4.0
+
+#### Feature:
+
++ pull task optionally loads the last message for initialisation from a data-provider via gRPC
+
+#### Update:
++ common: `5.7.1-dev`
++ grpc-service-generator: `3.5.1`
++ grpc-read-db: `0.0.4`
+
+#### Changed:
+
++ `initQuery` parameter in a pull task is made optional
 
 ### 0.3.4
 

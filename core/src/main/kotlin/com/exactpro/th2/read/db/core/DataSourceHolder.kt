@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package com.exactpro.th2.read.db.core
 
-interface UpdateListener {
-    fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>)
-    fun onError(dataSourceId: DataSourceId, reason: Throwable)
-    fun onComplete(dataSourceId: DataSourceId)
-}
+import javax.sql.DataSource
+
+data class DataSourceHolder(val dataSource: DataSource, val cfg: DataSourceConfiguration)

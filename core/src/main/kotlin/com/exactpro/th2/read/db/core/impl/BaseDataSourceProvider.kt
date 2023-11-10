@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,29 +17,32 @@
 package com.exactpro.th2.read.db.core.impl
 
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
+import com.exactpro.th2.read.db.core.DataSourceHolder
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataSourceProvider
 import mu.KotlinLogging
 import org.apache.commons.dbcp2.BasicDataSource
-import javax.sql.DataSource
 
 class BaseDataSourceProvider(
     configurations: Map<DataSourceId, DataSourceConfiguration>,
 ) : DataSourceProvider {
-    private val sourcesById: Map<DataSourceId, DataSource> = configurations.mapValues { (id, cfg) ->
+    private val sourcesById: Map<DataSourceId, DataSourceHolder> = configurations.mapValues { (id, cfg) ->
         LOGGER.trace { "Creating data source for $id" }
-        BasicDataSource().apply {
-            url = cfg.url
-            cfg.username?.also { username = it }
-            cfg.password?.also { password = it }
-            cfg.properties.forEach { (key, value) -> addConnectionProperty(key, value) }
-            LOGGER.trace { "Data source for $id created" }
-        }
+        DataSourceHolder(
+            BasicDataSource().apply {
+                url = cfg.url
+                cfg.username?.also { username = it }
+                cfg.password?.also { password = it }
+                cfg.properties.forEach { (key, value) -> addConnectionProperty(key, value) }
+                LOGGER.trace { "Data source for $id created" }
+            },
+            cfg
+        )
     }
 
-    override fun dataSource(dataSourceId: DataSourceId): DataSource {
-        return sourcesById[dataSourceId] ?: error("cannot find data source $dataSourceId. Known: ${sourcesById.keys}")
-    }
+    override fun dataSource(dataSourceId: DataSourceId) =
+        sourcesById[dataSourceId]
+            ?: error("cannot find data source $dataSourceId. Known: ${sourcesById.keys}")
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }

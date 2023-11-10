@@ -18,7 +18,11 @@ package com.exactpro.th2.read.db.core.impl
 
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
+import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataBaseService
+import com.exactpro.th2.read.db.core.HashService
+import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TableRow
@@ -41,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class DataBaseMonitorServiceImpl(
     private val dataBaseService: DataBaseService,
+    private val hashService: HashService,
 ) : DataBaseMonitorService {
     private val ids = AtomicInteger(1)
     private val runningTasks: MutableMap<TaskId, TaskHolder> = ConcurrentHashMap()
@@ -48,12 +53,14 @@ class DataBaseMonitorServiceImpl(
 
     override fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
+        startFromLastReadRow: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateQueryId: QueryId,
         updateParameters: QueryParametersValues,
         updateListener: UpdateListener,
+        messageLoader: MessageLoader,
         interval: Duration,
     ): TaskId {
         val id = TaskId(ids.getAndIncrement().toString())
@@ -63,7 +70,18 @@ class DataBaseMonitorServiceImpl(
             check(id !in runningTasks) { "task with id $id already submitted" }
             val job = launch {
                 try {
-                    poolUpdates(dataSourceId, initQueryId, initParameters, useColumns, updateParameters, interval, updateQueryId, updateListener)
+                    poolUpdates(
+                        dataSourceId,
+                        startFromLastReadRow,
+                        initQueryId,
+                        initParameters,
+                        useColumns,
+                        updateParameters,
+                        interval,
+                        updateQueryId,
+                        updateListener,
+                        messageLoader
+                    )
                 } finally {
                     updateListener.onComplete(dataSourceId)
                 }
@@ -89,15 +107,24 @@ class DataBaseMonitorServiceImpl(
 
     private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
+        startFromLastReadRow: Boolean,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateParameters: QueryParametersValues,
         interval: Duration,
         updateQueryId: QueryId,
-        updateListener: UpdateListener
+        updateListener: UpdateListener,
+        messageLoader: MessageLoader
     ) {
-        val lastRow: TableRow? = initQueryId?.let { queryId ->
+        val properties = mapOf(
+            TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, updateQueryId).toString()
+        )
+
+        val lastRow: TableRow? = when(startFromLastReadRow) {
+            true -> messageLoader.load(dataSourceId, properties)
+            else -> null
+        } ?: initQueryId?.let { queryId ->
             dataBaseService.executeQuery(
                 dataSourceId,
                 queryId,
@@ -126,7 +153,7 @@ class DataBaseMonitorServiceImpl(
                     updateQueryId,
                     finalParameters,
                 ).onEach {
-                    updateListener.onUpdate(dataSourceId, it)
+                    updateListener.onUpdate(dataSourceId, it, properties)
                 }.onCompletion { reason ->
                     reason?.also { updateListener.onError(dataSourceId, it) }
                 }.lastOrNull()?.also {

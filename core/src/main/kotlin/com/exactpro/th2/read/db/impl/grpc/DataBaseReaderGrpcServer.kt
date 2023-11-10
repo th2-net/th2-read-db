@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ class DataBaseReaderGrpcServer(
                 request.run {
                     PullTableRequest(
                         sourceId.toModel(),
+                        startFromLastReadRow,
                         if (hasInitQueryId()) initQueryId.toModel() else null,
                         initParameters.toModel(),
                         useColumnsList.toSet(),
@@ -131,7 +132,7 @@ class DataBaseReaderGrpcServer(
     }
 
     private object DummyUpdateListener : UpdateListener {
-        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow) = Unit
+        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) = Unit
 
         override fun onError(dataSourceId: DataSourceId, reason: Throwable) = Unit
 

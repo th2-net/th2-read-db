@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataSourceProvider
+import com.exactpro.th2.read.db.core.HashService
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
@@ -29,9 +31,9 @@ import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl
 import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
+import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
@@ -44,6 +46,7 @@ class DataBaseReader(
     private val scope: CoroutineScope,
     private val pullingListener: UpdateListener,
     private val rowListener: RowListener,
+    private val messageLoader: MessageLoader,
 ) : AutoCloseable {
 
     fun start() {
@@ -63,12 +66,14 @@ class DataBaseReader(
                     LOGGER.info { "Launching pull task from ${task.dataSource} with ${task.initQueryId} init query and ${task.updateQueryId} update query" }
                     scope.submitTask(
                         task.dataSource,
+                        task.startFromLastReadRow,
                         task.initQueryId,
                         task.initParameters,
                         task.useColumns,
                         task.updateQueryId,
                         task.updateParameters,
                         pullingListener,
+                        messageLoader,
                         Duration.ofMillis(task.interval),
                     )
                 }
@@ -107,12 +112,14 @@ class DataBaseReader(
             with(request) {
                 scope.submitTask(
                     dataSourceId,
+                    startFromLastReadRow,
                     initQueryId,
                     initParameters,
                     useColumns,
                     updateQueryId,
                     updateParameters,
                     wrap(rowTransformer, updateListener, pullingListener),
+                    messageLoader,
                     interval,
                 )
             }
@@ -148,9 +155,9 @@ class DataBaseReader(
         private val listeners: Collection<UpdateListener>,
         private val rowTransformer: (TableRow) -> TableRow,
     ) : UpdateListener {
-        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow) {
+        override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) {
             val updatedRow = rowTransformer(row)
-            forEach { onUpdate(dataSourceId, updatedRow) }
+            forEach { onUpdate(dataSourceId, updatedRow, properties) }
         }
 
         override fun onError(dataSourceId: DataSourceId, reason: Throwable) {
@@ -179,11 +186,13 @@ class DataBaseReader(
             scope: CoroutineScope,
             pullingListener: UpdateListener,
             rowListener: RowListener,
+            messageLoader: MessageLoader,
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
             val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider)
-            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService)
+            val hashService: HashService = BaseHashServiceImpl(sourceProvider, queryProvider)
+            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService, hashService)
             return DataBaseReader(
                 dataBaseService,
                 monitorService,
@@ -191,6 +200,7 @@ class DataBaseReader(
                 scope,
                 pullingListener,
                 rowListener,
+                messageLoader,
             )
         }
     }

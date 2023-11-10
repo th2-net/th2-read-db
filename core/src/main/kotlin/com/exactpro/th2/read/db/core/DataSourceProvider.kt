@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 
 package com.exactpro.th2.read.db.core
 
-import javax.sql.DataSource
-
 interface DataSourceProvider {
     /**
-     * Returns [DataSource] for specified [dataSourceId] or throws an exception
+     * Returns [DataSourceHolder] for specified [dataSourceId] or throws an exception
      */
-    fun dataSource(dataSourceId: DataSourceId): DataSource
+    fun dataSource(dataSourceId: DataSourceId): DataSourceHolder
 }
 
-operator fun DataSourceProvider.get(dataSourceId: DataSourceId): DataSource = dataSource(dataSourceId)
+operator fun DataSourceProvider.get(dataSourceId: DataSourceId): DataSourceHolder = dataSource(dataSourceId)

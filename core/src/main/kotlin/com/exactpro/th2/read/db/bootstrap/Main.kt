@@ -17,6 +17,7 @@
 @file:JvmName("Main")
 package com.exactpro.th2.read.db.bootstrap
 
+import com.exactpro.th2.common.grpc.Direction.FIRST
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
@@ -29,12 +30,17 @@ import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.factory.extensions.getCustomConfiguration
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.common.schema.message.QueueAttribute
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
 import com.exactpro.th2.common.utils.message.transport.toGroup
+import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
+import com.exactpro.th2.lwdataprovider.MessageSearcher
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
 import com.exactpro.th2.read.db.app.validate
 import com.exactpro.th2.read.db.core.DataSourceId
+import com.exactpro.th2.read.db.core.MessageLoader
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
@@ -45,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import mu.KotlinLogging
+import java.time.Duration
 import java.time.Instant
 import java.util.Deque
 import java.util.concurrent.ArrayBlockingQueue
@@ -123,6 +130,7 @@ internal fun setupApp(
 
     val appScope = createScope(closeResource)
     val componentBookName = factory.boxConfiguration.bookName
+    val messageLoader: MessageLoader = createMessageLoader(factory, componentBookName)
     val reader = if (cfg.useTransport) {
         val messageRouter: MessageRouter<GroupBatch> = factory.transportGroupBatchRouter
         val messageQueue: BlockingQueue<RawMessage.Builder> = configureTransportMessageStoring(
@@ -141,7 +149,7 @@ internal fun setupApp(
                 QueueAttribute.TRANSPORT_GROUP.value
             )
         }
-        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toTransportMessage)
+        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toTransportMessage, messageLoader)
     } else {
         val messageRouter = factory.messageRouterMessageGroupBatch
         val messageQueue = configureTransportMessageStoring(
@@ -161,7 +169,7 @@ internal fun setupApp(
                 QueueAttribute.RAW.value,
             )
         }
-        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toProtoMessage)
+        createReader(cfg, appScope, messageQueue, closeResource, TableRow::toProtoMessage, messageLoader)
     }
 
     val handler = DataBaseReaderGrpcServer(reader)
@@ -182,19 +190,44 @@ internal fun setupApp(
     READINESS_MONITOR.enable()
 }
 
-private fun <BUILDER> createReader(
+private fun createMessageLoader(
+    factory: CommonFactory,
+    componentBookName: String
+) = runCatching {
+    MessageSearcher.create(factory.grpcRouter.getService(DataProviderService::class.java)).run {
+        MessageLoader { dataSourceId, properties ->
+            findLastOrNull(
+                book = componentBookName,
+                sessionAlias = dataSourceId.id,
+                direction = FIRST,
+                searchInterval = Duration.ofDays(1),
+            ) {
+                properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
+            }?.toTableRow()
+        }
+    }
+}.onFailure {
+    LOGGER.warn(it) {
+        "Loading message from a data-provider is disabled because gRPC pin for ${DataProviderService::class.java} service isn't configured"
+    }
+}.onSuccess {
+    LOGGER.info { "Loading message from a data-provider is enabled" }
+}.getOrNull() ?: MessageLoader.DISABLED
+
+private fun <BUILDER: Any> createReader(
     cfg: DataBaseReaderConfiguration,
     appScope: CoroutineScope,
     messageQueue: BlockingQueue<BUILDER>,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
-    toMessage: TableRow.(DataSourceId) -> BUILDER
+    toMessage: TableRow.(DataSourceId, Map<String, String>) -> BUILDER,
+    loadLastMessage: MessageLoader,
 ): DataBaseReader {
     val reader = DataBaseReader.createDataBaseReader(
         cfg,
         appScope,
         pullingListener = object : UpdateListener {
-            override fun onUpdate(dataSourceId: DataSourceId, row: TableRow) {
-                messageQueue.put(row.toMessage(dataSourceId))
+            override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) {
+                messageQueue.put(row.toMessage(dataSourceId, properties))
             }
 
             override fun onError(dataSourceId: DataSourceId, reason: Throwable) {
@@ -208,8 +241,9 @@ private fun <BUILDER> createReader(
         },
         rowListener = { sourceId, row ->
             LOGGER.debug { "Storing row from $sourceId. Columns: ${row.columns.keys}" }
-            messageQueue.put(row.toMessage(sourceId))
+            messageQueue.put(row.toMessage(sourceId, emptyMap()))
         },
+        messageLoader = loadLastMessage
     )
     closeResource("reader", reader::close)
     reader.start()

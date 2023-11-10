@@ -16,33 +16,44 @@
 
 package com.exactpro.th2.read.db.bootstrap
 
+import com.exactpro.th2.common.grpc.Direction.FIRST
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.sessionAlias
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
+import com.exactpro.th2.common.message.toJson
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
+import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.TableRow
 import com.google.protobuf.UnsafeByteOperations
+import com.opencsv.CSVParserBuilder
+import com.opencsv.CSVReaderBuilder
 import com.opencsv.CSVWriterBuilder
+import com.opencsv.enums.CSVReaderNullFieldIndicator
 import io.netty.buffer.ByteBufUtil.hexDump
 import io.netty.buffer.Unpooled
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
-import com.exactpro.th2.common.grpc.Direction as ProtoDirection
 import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
-internal fun TableRow.toProtoMessage(dataSourceId: DataSourceId): ProtoRawMessage.Builder {
+internal const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
+private const val SEPARATOR = ','
+
+internal fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<String, String>): ProtoRawMessage.Builder {
     return ProtoRawMessage.newBuilder()
         .setBody(UnsafeByteOperations.unsafeWrap(toCsvBody()))
         .apply {
             sessionAlias = dataSourceId.id
-            direction = ProtoDirection.FIRST
+            direction = FIRST
             associatedMessageType?.also {
-                metadataBuilder.putProperties("th2.csv.override_message_type", it)
+                metadataBuilder.putProperties(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, it)
             }
+            metadataBuilder.putAllProperties(properties)
         }
 }
 
-internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage.Builder {
+internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties: Map<String, String>): RawMessage.Builder {
     val builder = RawMessage.builder()
         .setBody(Unpooled.wrappedBuffer(toCsvBody()))
         .apply {
@@ -52,8 +63,9 @@ internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage
         }
 
     if (associatedMessageType != null) {
-        builder.setMetadata(mapOf("th2.csv.override_message_type" to associatedMessageType))
+        builder.addMetadataProperty(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, associatedMessageType)
     }
+    properties.forEach(builder::addMetadataProperty)
 
     return builder
 }
@@ -61,7 +73,7 @@ internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId): RawMessage
 internal fun TableRow.toCsvBody(): ByteArray {
     return ByteArrayOutputStream().use {
         CSVWriterBuilder(it.writer())
-            .withSeparator(',')
+            .withSeparator(SEPARATOR)
             .build().use { writer ->
                 val columnNames = columns.keys.toTypedArray()
                 val values: Array<String?> = columnNames.map { name -> columns[name]?.toStringValue() }
@@ -71,6 +83,45 @@ internal fun TableRow.toCsvBody(): ByteArray {
             }
         it
     }.toByteArray()
+}
+
+/**
+ * NOTE: crated TableRow contains only [String] values
+ */
+internal fun MessageSearchResponse.toTableRow(): TableRow {
+    return ByteArrayInputStream(message.bodyRaw.toByteArray()).use {
+        CSVReaderBuilder(it.reader())
+            .withCSVParser(
+                CSVParserBuilder()
+                .withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
+                .withSeparator(SEPARATOR)
+                .build()
+            ).build().use { reader ->
+                val lines: MutableList<Array<String>> = reader.readAll()
+                check(lines.size == 2) {
+                    "CSV content of '${message.messageId.toJson()}' message id has ${lines.size} rows instead of 2"
+                }
+
+                val (header, row) = lines
+                check(header.size == row.size) {
+                    "CSV content of '${message.messageId.toJson()}' message id has different length of header [${header.size}] and row [${row.size}]"
+                }
+
+                val columns = HashMap<String, String>()
+                header.forEachIndexed { index, column ->
+                    columns.put(column, row[index]).also { previous ->
+                        check(previous == null) {
+                            "CSV content of '${message.messageId.toJson()}' message id has duplicate column: $column with values: [$previous, ${row[index]}]"
+                        }
+                    }
+                }
+
+                TableRow(
+                    columns,
+                    message.getMessagePropertiesOrDefault(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, null)
+                )
+            }
+    }
 }
 
 private fun Any.toStringValue(): String = when (this) {

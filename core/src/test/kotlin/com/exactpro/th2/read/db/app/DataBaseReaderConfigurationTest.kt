@@ -125,6 +125,7 @@ internal class DataBaseReaderConfigurationTest {
                         .isEqualTo(
                             PullTaskConfiguration(
                                 dataSource,
+                                true,
                                 queryId,
                                 mapOf(
                                     "param1" to listOf("value1")
@@ -203,6 +204,7 @@ internal class DataBaseReaderConfigurationTest {
                 {
                   "type": "pull",
                   "dataSource": "test",
+                  "startFromLastReadRow": true,
                   "initParameters": {
                     "param1": ["value1"]
                   },
@@ -247,6 +249,7 @@ internal class DataBaseReaderConfigurationTest {
                         .isEqualTo(
                             PullTaskConfiguration(
                                 dataSource,
+                                true,
                                 null,
                                 mapOf(
                                     "param1" to listOf("value1")
@@ -278,6 +281,7 @@ internal class DataBaseReaderConfigurationTest {
                 {
                   "type": "pull",
                   "dataSource": "test",
+                  "startFromLastReadRow": true,
                   "initParameters": {
                     "param1": ["value1"]
                   },
@@ -328,6 +332,7 @@ internal class DataBaseReaderConfigurationTest {
                 {
                   "type": "pull",
                   "dataSource": "test",
+                  "startFromLastReadRow": true,
                   "initQueryId": "test_query",
                   "initParameters": {
                     "param1": ["value1"]

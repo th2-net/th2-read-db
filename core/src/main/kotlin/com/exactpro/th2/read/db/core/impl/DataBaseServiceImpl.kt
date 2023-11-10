@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ class DataBaseServiceImpl(
         parameters: QueryParametersValues,
     ): Flow<TableRow> {
         LOGGER.info { "Executing query $queryId for $dataSourceId connection with $parameters parameters without default" }
-        val dataSource: DataSource = dataSourceProvider[dataSourceId]
+        val dataSource: DataSource = dataSourceProvider[dataSourceId].dataSource
         val queryHolder: QueryHolder = queriesProvider[queryId]
         val connection = dataSource.connection
         val finalParameters = queryHolder.defaultParameters.toMutableMap().apply {
