@@ -69,6 +69,7 @@ class DataBaseServiceImpl(
                         }
                     }
                 }
+                LOGGER.debug { "Native query: $this" }
                 executeQuery()
             }
         } catch (ex: Exception) {
