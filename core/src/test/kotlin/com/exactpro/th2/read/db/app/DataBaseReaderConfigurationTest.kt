@@ -36,6 +36,8 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.single
 import java.io.InputStream
 import java.nio.file.Path
+import java.time.Instant
+import java.time.LocalTime
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderConfigurationTest {
@@ -126,6 +128,10 @@ internal class DataBaseReaderConfigurationTest {
                             PullTaskConfiguration(
                                 dataSource,
                                 true,
+                                ResetState(
+                                    Instant.parse("2023-11-14T12:12:34.567890123Z"),
+                                    LocalTime.parse("12:12:34.567890123")
+                                ),
                                 queryId,
                                 mapOf(
                                     "param1" to listOf("value1")
@@ -250,6 +256,7 @@ internal class DataBaseReaderConfigurationTest {
                             PullTaskConfiguration(
                                 dataSource,
                                 true,
+                                ResetState(),
                                 null,
                                 mapOf(
                                     "param1" to listOf("value1")
@@ -332,6 +339,10 @@ internal class DataBaseReaderConfigurationTest {
                 {
                   "type": "pull",
                   "dataSource": "test",
+                  "resetStateParameters": {
+                    "afterDate": "2023-11-14T12:12:34.567890123Z",
+                    "afterTime": "12:12:34.567890123"
+                  },
                   "startFromLastReadRow": true,
                   "initQueryId": "test_query",
                   "initParameters": {

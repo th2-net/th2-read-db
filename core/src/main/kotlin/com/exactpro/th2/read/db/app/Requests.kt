@@ -30,6 +30,7 @@ class ExecuteQueryRequest(
 class PullTableRequest(
     val dataSourceId: DataSourceId,
     val startFromLastReadRow: Boolean,
+    val resetStateParameters: ResetState,
     val initQueryId: QueryId?,
     val initParameters: QueryParametersValues,
     val useColumns: Set<String>,

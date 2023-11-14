@@ -51,6 +51,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.same
@@ -200,6 +201,7 @@ internal class DataBaseReaderIntegrationTest {
                 PullTableRequest(
                     DataSourceId("persons"),
                     false,
+                    ResetState(),
                     QueryId("current_state"),
                     emptyMap(),
                     setOf("id"),
@@ -220,7 +222,7 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(newData)
             listener.assertCaptured(newData)
-            verify(messageLoader, never()).load(any(), any())
+            verify(messageLoader, never()).load(any(), isNull(), any())
             verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 
@@ -261,6 +263,7 @@ internal class DataBaseReaderIntegrationTest {
                 PullTableRequest(
                     DataSourceId("persons"),
                     false,
+                    ResetState(),
                     null,
                     mapOf("id" to listOf(startId.toString())),
                     setOf("id"),
@@ -283,7 +286,7 @@ internal class DataBaseReaderIntegrationTest {
 
             genericUpdateListener.assertCaptured(pulledData)
             listener.assertCaptured(pulledData)
-            verify(messageLoader, never()).load(any(), any())
+            verify(messageLoader, never()).load(any(), isNull(), any())
             verifyNoInteractions(genericRowListener)
             reader.stopPullTask(taskId)
 
@@ -297,7 +300,7 @@ internal class DataBaseReaderIntegrationTest {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
         val messageLoader = mock<MessageLoader> {
-            on { load(any(), any()) }.thenReturn(persons[startId - 1].toTableRow(startId))
+            on { load(any(), isNull(), any()) }.thenReturn(persons[startId - 1].toTableRow(startId))
         }
         val interval = Duration.ofMillis(100)
 
@@ -335,6 +338,7 @@ internal class DataBaseReaderIntegrationTest {
                 PullTableRequest(
                     dataSourceId,
                     true,
+                    ResetState(),
                     null,
                     emptyMap(),
                     setOf("id"),
@@ -359,6 +363,7 @@ internal class DataBaseReaderIntegrationTest {
             listener.assertCaptured(pulledData)
             verify(messageLoader).load(
                 same(dataSourceId),
+                isNull(),
                 eq(
                     mapOf(
                         TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, queryId).toString()

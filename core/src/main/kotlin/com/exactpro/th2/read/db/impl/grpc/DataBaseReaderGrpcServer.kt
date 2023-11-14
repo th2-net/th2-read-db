@@ -18,14 +18,17 @@ package com.exactpro.th2.read.db.impl.grpc
 
 import com.exactpro.th2.common.message.toJavaDuration
 import com.exactpro.th2.common.message.toJson
+import com.exactpro.th2.common.util.toInstant
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.app.PullTableRequest
+import com.exactpro.th2.read.db.app.ResetState
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.grpc.DbPullRequest
+import com.exactpro.th2.read.db.grpc.DbPullResetState
 import com.exactpro.th2.read.db.grpc.DbPullResponse
 import com.exactpro.th2.read.db.grpc.QueryRequest
 import com.exactpro.th2.read.db.grpc.QueryResponse
@@ -37,6 +40,8 @@ import com.google.protobuf.Empty
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
+import java.time.LocalTime
+import java.time.ZoneOffset
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
@@ -72,6 +77,7 @@ class DataBaseReaderGrpcServer(
                     PullTableRequest(
                         sourceId.toModel(),
                         startFromLastReadRow,
+                        resetStateParameters.toResetState(),
                         if (hasInitQueryId()) initQueryId.toModel() else null,
                         initParameters.toModel(),
                         useColumnsList.toSet(),
@@ -141,5 +147,11 @@ class DataBaseReaderGrpcServer(
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
+
+        internal fun DbPullResetState.toResetState(): ResetState = ResetState(
+            if(hasAfterDate()) afterDate.toInstant() else null,
+            //TODO: maybe use another protobuf type or check date unit
+            if(hasAfterTime()) LocalTime.ofInstant(afterTime.toInstant(), ZoneOffset.UTC) else null
+        )
     }
 }

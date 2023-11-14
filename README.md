@@ -1,4 +1,4 @@
-# th2-read-db 0.4.0
+# th2-read-db 0.5.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -88,7 +88,11 @@ The read tasks tries to read all data from the specified data source using speci
 Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
-+ startFromLastReadRow - task tries to load previous state via `data-provider` if this option is `true` 
++ startFromLastReadRow - task tries to load previous state via `data-provider` if this option is `true`
++ resetStateParameters - optional parameters for resenting internal state to re-init task by schedule.
+  + afterDate - optional parameter with date time in [ISO_INSTANT](https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_INSTANT) format.
+  + afterTime - optional parameter with time in [ISO_LOCAL_TIME](https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_LOCAL_TIME) format.
+    read-db parses the string value using UTC time zone.
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
 + initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
@@ -283,6 +287,16 @@ spec:
 
 ## Changes
 
+### 0.5.0
+
+#### Feature:
+
++ added the `reset state parameters` option to configure static or dynamic dates of reset 
+
+#### Update:
+
++ grpc-read-db: `0.0.5`
+
 ### 0.4.0
 
 #### Feature:
@@ -292,6 +306,7 @@ spec:
 + pull task optionally loads the last message for initialisation from a data-provider via gRPC
 
 #### Update:
+
 + common: `5.7.1-dev`
 + grpc-service-generator: `3.5.1`
 + grpc-read-db: `0.0.4`

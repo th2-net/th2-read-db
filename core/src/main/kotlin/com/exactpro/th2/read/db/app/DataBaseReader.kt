@@ -67,6 +67,7 @@ class DataBaseReader(
                     scope.submitTask(
                         task.dataSource,
                         task.startFromLastReadRow,
+                        task.resetStateParameters,
                         task.initQueryId,
                         task.initParameters,
                         task.useColumns,
@@ -113,6 +114,7 @@ class DataBaseReader(
                 scope.submitTask(
                     dataSourceId,
                     startFromLastReadRow,
+                    resetStateParameters,
                     initQueryId,
                     initParameters,
                     useColumns,

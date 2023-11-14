@@ -16,17 +16,20 @@
 
 package com.exactpro.th2.read.db.core
 
+import java.time.Instant
+
 fun interface MessageLoader {
     /**
      * Loads the most recent message from the Cradle produced by data source with [dataSourceId]
-     * that has a specified set of [properties] in its metadata
+     * that message timestamp is after or equal [horizon] and has a specified set of [properties] in its metadata
      * @param dataSourceId is used for session alias determination related to the data source
+     * @param horizon where messages are actual
      * @param properties is used for filtering messages to find the first suitable
      */
-    fun load(dataSourceId: DataSourceId, properties: Map<String, String>): TableRow?
+    fun load(dataSourceId: DataSourceId, horizon: Instant?, properties: Map<String, String>): TableRow?
 
     companion object {
         @JvmField
-        val DISABLED = MessageLoader { _, _ -> error("Message loader doesn't configured to execute request") }
+        val DISABLED = MessageLoader { _, _, _ -> error("Message loader doesn't configured to execute request") }
     }
 }
