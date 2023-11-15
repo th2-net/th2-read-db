@@ -89,10 +89,10 @@ Pulls updates from the specified data source using the specified queries.
 
 + dataSource - the id of the source that should be used
 + startFromLastReadRow - task tries to load previous state via `data-provider` if this option is `true`
-+ resetStateParameters - optional parameters for resenting internal state to re-init task by schedule.
++ resetStateParameters - optional parameters for resetting internal state to re-init task by schedule.
   + afterDate - optional parameter with date time in [ISO_INSTANT](https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_INSTANT) format.
   + afterTime - optional parameter with time in [ISO_LOCAL_TIME](https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_LOCAL_TIME) format.
-    read-db parses the string value using UTC time zone.
+    The time value must be specified in the UTC zone.
 + initQueryId - the id of the query that should be used to retrieve the current state of the database.
   NOTE: this parameter is used to initialize state and read-db doesn't publish retrieved messages to MQ router.
 + initParameters - the parameters that should be used in the init query. Also, The task uses these parameters to configure the first `updateQuery` execution if `initQuery` parameter is not specified
