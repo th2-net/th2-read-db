@@ -57,7 +57,7 @@ message DbPullRequest {
 
 message DbPullResetState {
   google.protobuf.Timestamp after_date = 1;
-  google.protobuf.Timestamp afterTime = 2;
+  google.protobuf.Timestamp after_time = 2; // Only time units matter, expected date units is 1970-01-01
 }
 
 message PullTaskId {

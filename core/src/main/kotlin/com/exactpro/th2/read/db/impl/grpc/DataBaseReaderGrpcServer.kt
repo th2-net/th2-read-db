@@ -37,11 +37,14 @@ import com.exactpro.th2.read.db.grpc.StopPullingRequest
 import com.exactpro.th2.read.db.impl.grpc.util.toGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
+import com.google.protobuf.util.Timestamps
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
+import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoField
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
@@ -148,10 +151,23 @@ class DataBaseReaderGrpcServer(
     companion object {
         private val LOGGER = KotlinLogging.logger { }
 
-        internal fun DbPullResetState.toResetState(): ResetState = ResetState(
-            if(hasAfterDate()) afterDate.toInstant() else null,
-            //TODO: maybe use another protobuf type or check date unit
-            if(hasAfterTime()) LocalTime.ofInstant(afterTime.toInstant(), ZoneOffset.UTC) else null
-        )
+        internal fun DbPullResetState.toResetState(): ResetState {
+            val afterDate = if (hasAfterDate()) afterDate.toInstant() else null
+            val afterTime = if (hasAfterTime()) {
+                val instant: Instant = afterTime.toInstant()
+                LocalTime.ofInstant(instant, ZoneOffset.UTC).also { time ->
+                    if (
+                        instant.get(ChronoField.DAY_OF_MONTH) != 1
+                        || instant.get(ChronoField.MONTH_OF_YEAR) != 1
+                        || instant.get(ChronoField.YEAR) != 1970
+                    ) {
+                        LOGGER.warn { "Only '$time' time units of 'afterTime' is used from '${Timestamps.toString(afterTime)}' origin value, expected format '1970-01-01T??:??:??.??????Z'" }
+                    }
+                }
+            } else {
+                null
+            }
+            return ResetState(afterDate, afterTime)
+        }
     }
 }

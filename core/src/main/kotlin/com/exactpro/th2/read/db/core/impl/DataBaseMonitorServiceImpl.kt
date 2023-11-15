@@ -118,7 +118,7 @@ class DataBaseMonitorServiceImpl(
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateParameters: QueryParametersValues,
-        interval: Long,
+        intervalMilliseconds: Long,
         updateQueryId: QueryId,
         updateListener: UpdateListener,
         messageLoader: MessageLoader
@@ -129,6 +129,13 @@ class DataBaseMonitorServiceImpl(
         val finalParameters: MutableMap<String, Collection<String>> = hashMapOf()
         var lastResetTime = Instant.MIN
         var firstIteration = true
+
+        fun extractParameters(lastRow: TableRow): QueryParametersValues {
+            return useColumns.associateWith {
+                val value = lastRow.columns[it] ?: error("Missing required parameter $it from init query result $lastRow")
+                listOf(value.toString())
+            }
+        }
 
         do {
             val resetDate = resetStateParameters.calculateNearestResetDate()
@@ -155,7 +162,7 @@ class DataBaseMonitorServiceImpl(
                 if (lastRow == null) {
                     finalParameters.putAll(initParameters)
                 } else {
-                    finalParameters.putAll(useColumns.extractParameters(lastRow))
+                    finalParameters.putAll(extractParameters(lastRow))
                 }
 
                 LOGGER.info { "Initialised update query parameters: $finalParameters, nearest reset date: $resetDate" }
@@ -171,25 +178,18 @@ class DataBaseMonitorServiceImpl(
                 }.onCompletion { reason ->
                     reason?.also { updateListener.onError(dataSourceId, it) }
                 }.lastOrNull()?.also {
-                    finalParameters.putAll(useColumns.extractParameters(it))
+                    finalParameters.putAll(extractParameters(it))
                 }
             } catch (ex: Exception) {
                 updateListener.onError(dataSourceId, ex)
             }
 
-            delay(interval)
+            delay(intervalMilliseconds)
         } while (currentCoroutineContext().isActive)
     }
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
-
-        private fun Set<String>.extractParameters(lastRow: TableRow): QueryParametersValues {
-            return associateWith {
-                val value = lastRow.columns[it] ?: error("Missing required parameter $it from init query result $lastRow")
-                listOf(value.toString())
-            }
-        }
     }
 
     override fun close() {
