@@ -18,6 +18,7 @@ package com.exactpro.th2.read.db.core
 
 import com.exactpro.th2.read.db.app.ResetState
 import kotlinx.coroutines.CoroutineScope
+import mu.KotlinLogging
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
@@ -42,27 +43,28 @@ interface DataBaseMonitorService : AutoCloseable {
     suspend fun cancelTask(id: TaskId)
 
     companion object {
+        private val LOGGER = KotlinLogging.logger { }
         internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
 
         /**
-         * Calculates the nearest reset date before or equal [now]
+         * Calculates the nearest reset date before or equal [current]. [current] time is excluded
          * @return null when:<br>
          *   * [ResetState.afterDate] and [ResetState.afterTime] are null
-         *   * [ResetState.afterDate] is after [now] and [ResetState.afterTime] is null
+         *   * [ResetState.afterDate] is after [current] and [ResetState.afterTime] is null
          *
          * otherwise [Instant]
          */
-        internal fun ResetState.calculateNearestResetDate(now: Instant = Instant.now()): Instant? {
-            val horizonByAfterDate: Instant = afterDate?.let {
-                if (it.isAfter(now)) {
+        internal fun ResetState.calculateNearestResetDate(current: Instant): Instant? {
+            val boundaryByAfterDate: Instant = afterDate?.let {
+                if (it > current) {
                     null
                 } else {
                     it
                 }
             } ?: Instant.MIN
-            val horizonByAfterTime: Instant = afterTime?.let {
-                val currentRestDate = now.withTime(it)
-                if (currentRestDate.isAfter(now)) {
+            val boundaryAfterTime: Instant = afterTime?.let {
+                val currentRestDate = current.withTime(it)
+                if (currentRestDate > current) {
                     currentRestDate.minus(1L, ChronoUnit.DAYS)
                 } else {
                     currentRestDate
@@ -70,9 +72,11 @@ interface DataBaseMonitorService : AutoCloseable {
 
             } ?: Instant.MIN
 
-            val result: Instant = maxOf(horizonByAfterDate, horizonByAfterTime)
+            val result: Instant = maxOf(boundaryByAfterDate, boundaryAfterTime)
 
-            return if (result == Instant.MIN) null else result
+            return (if (result == Instant.MIN) null else result).also {
+                LOGGER.trace { "Calculated nearest reset date, result: $it, data boundary: $boundaryByAfterDate, time boundary: $boundaryAfterTime, after date: $afterDate, after time: $afterTime, now: $current" }
+            }
         }
 
         private fun Instant.withTime(time: LocalTime): Instant = atZone(ZoneOffset.UTC)

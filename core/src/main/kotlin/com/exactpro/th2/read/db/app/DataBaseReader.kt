@@ -37,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import java.time.Clock
 import java.time.Duration
 
 class DataBaseReader(
@@ -189,12 +190,13 @@ class DataBaseReader(
             pullingListener: UpdateListener,
             rowListener: RowListener,
             messageLoader: MessageLoader,
+            clock: Clock = Clock.systemDefaultZone()
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
             val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider)
             val hashService: HashService = BaseHashServiceImpl(sourceProvider, queryProvider)
-            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService, hashService)
+            val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService, hashService, clock)
             return DataBaseReader(
                 dataBaseService,
                 monitorService,

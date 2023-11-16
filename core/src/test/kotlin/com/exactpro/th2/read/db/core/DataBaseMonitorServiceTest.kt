@@ -31,14 +31,14 @@ import java.time.temporal.ChronoUnit.MINUTES
 class DataBaseMonitorServiceTest {
     @Test
     fun `is reset required where empty test`() {
-        assertNull(ResetState().calculateNearestResetDate())
+        assertNull(ResetState().calculateNearestResetDate(Instant.now()))
     }
 
     @Test
     fun `is reset required where after-date before now test`() {
         val now = Instant.now()
         val afterDate = now.minus(1L, MINUTES)
-        assertSame(afterDate, ResetState(afterDate).calculateNearestResetDate())
+        assertSame(afterDate, ResetState(afterDate).calculateNearestResetDate(Instant.now()))
     }
 
     @Test
@@ -51,7 +51,7 @@ class DataBaseMonitorServiceTest {
     fun `is reset required where after-date after now test`() {
         val now = Instant.now()
         val afterDate = now.plus(1L, MINUTES)
-        assertNull(ResetState(afterDate).calculateNearestResetDate())
+        assertNull(ResetState(afterDate).calculateNearestResetDate(Instant.now()))
     }
 
     @Test

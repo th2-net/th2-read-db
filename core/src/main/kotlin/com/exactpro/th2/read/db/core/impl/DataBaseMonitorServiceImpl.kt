@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class DataBaseMonitorServiceImpl(
     private val dataBaseService: DataBaseService,
     private val hashService: HashService,
+    private val clock: Clock,
 ) : DataBaseMonitorService {
     private val ids = AtomicInteger(1)
     private val runningTasks: MutableMap<TaskId, TaskHolder> = ConcurrentHashMap()
@@ -138,10 +140,12 @@ class DataBaseMonitorServiceImpl(
         }
 
         do {
-            val resetDate = resetStateParameters.calculateNearestResetDate()
-            if (firstIteration || (resetDate != null && lastResetTime.isBefore(resetDate))) {
+            val now = clock.instant()
+            val resetDate = resetStateParameters.calculateNearestResetDate(now)
+            if (firstIteration || (resetDate != null && lastResetTime < resetDate)) {
+                LOGGER.info { "Initialize update query parameters, is first: $firstIteration, nearest reset: $resetDate, last reset: $lastResetTime" }
                 firstIteration = false
-                lastResetTime = Instant.now()
+                lastResetTime = now
 
                 finalParameters.apply {
                     clear()
@@ -164,8 +168,6 @@ class DataBaseMonitorServiceImpl(
                 } else {
                     finalParameters.putAll(extractParameters(lastRow))
                 }
-
-                LOGGER.info { "Initialised update query parameters: $finalParameters, nearest reset date: $resetDate" }
             }
 
             try {

@@ -34,9 +34,9 @@ import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
@@ -48,15 +48,17 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.Mockito.timeout
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.same
 import org.mockito.kotlin.spy
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import strikt.api.expectThat
@@ -64,9 +66,11 @@ import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
 import java.sql.Connection
 import java.sql.Date
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
@@ -218,9 +222,8 @@ internal class DataBaseReaderIntegrationTest {
             insertData(newData)
 
             advanceTimeBy(interval.toMillis() * 2)
-            delay(interval.toMillis() * 2)
 
-            genericUpdateListener.assertCaptured(newData)
+            genericUpdateListener.assertCaptured(newData, interval.toMillis() * 2)
             listener.assertCaptured(newData)
             verify(messageLoader, never()).load(any(), isNull(), any())
             verifyNoInteractions(genericRowListener)
@@ -282,9 +285,8 @@ internal class DataBaseReaderIntegrationTest {
             val pulledData = (persons + newData).drop(startId)
 
             advanceTimeBy(interval.toMillis() * 2)
-            delay(interval.toMillis() * 2)
 
-            genericUpdateListener.assertCaptured(pulledData)
+            genericUpdateListener.assertCaptured(pulledData, interval.toMillis() * 2)
             listener.assertCaptured(pulledData)
             verify(messageLoader, never()).load(any(), isNull(), any())
             verifyNoInteractions(genericRowListener)
@@ -357,9 +359,8 @@ internal class DataBaseReaderIntegrationTest {
             val pulledData = (persons + newData).drop(startId)
 
             advanceTimeBy(interval.toMillis() * 2)
-            delay(interval.toMillis() * 2)
 
-            genericUpdateListener.assertCaptured(pulledData)
+            genericUpdateListener.assertCaptured(pulledData, interval.toMillis() * 2)
             listener.assertCaptured(pulledData)
             verify(messageLoader).load(
                 same(dataSourceId),
@@ -377,10 +378,171 @@ internal class DataBaseReaderIntegrationTest {
         }
     }
 
-    private fun UpdateListener.assertCaptured(persons: List<Person>) {
+    @Test
+    fun `reset internal state by afterDate`() {
+        val instant = Instant.now()
+        val resetDate = instant.plus(1, ChronoUnit.MINUTES)
+        val interval = Duration.ofMillis(100)
+
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
+        val clock = mock<Clock> {
+            on { instant() }.thenReturn(instant)
+        }
+
+        runTest {
+            val reader = DataBaseReader.createDataBaseReader(
+                DataBaseReaderConfiguration(
+                    mapOf(
+                        DataSourceId("persons") to DataSourceConfiguration(
+                            mysql.jdbcUrl,
+                            mysql.username,
+                            mysql.password,
+                        )
+                    ),
+                    mapOf(
+                        QueryId("updates") to QueryConfiguration(
+                            "SELECT * FROM test_data.person WHERE id > \${id:integer}"
+                        )
+                    )
+                ),
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+                clock
+            )
+            val listener = mock<UpdateListener> { }
+            val taskId = reader.submitPullTask(
+                PullTableRequest(
+                    DataSourceId("persons"),
+                    false,
+                    ResetState(
+                        afterDate = resetDate
+                    ),
+                    null,
+                    mapOf("id" to listOf(persons.size.toString())),
+                    setOf("id"),
+                    QueryId("updates"),
+                    emptyMap(),
+                    interval,
+                ),
+                listener,
+            )
+
+            runCurrent()
+
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
+            insertData(newData)
+
+            advanceTimeBy(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(newData, interval.toMillis())
+            listener.assertCaptured(newData)
+            verify(messageLoader, never()).load(any(), isNull(), any())
+            verifyNoInteractions(genericRowListener)
+
+            clearInvocations(genericUpdateListener)
+            clearInvocations(listener)
+            `when`(clock.instant()).thenReturn(resetDate)
+            advanceTimeBy(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(newData, interval.toMillis())
+            listener.assertCaptured(newData)
+            verify(messageLoader, never()).load(any(), isNull(), any())
+            verifyNoInteractions(genericRowListener)
+
+            reader.stopPullTask(taskId)
+            advanceUntilIdle()
+        }
+    }
+
+    @Test
+    fun `reset internal state by afterTime`() {
+        val instant = Instant.now()
+        val resetDate = instant.plus(1, ChronoUnit.MINUTES)
+        val resetTime = LocalTime.ofInstant(resetDate, ZoneOffset.UTC)
+        val interval = Duration.ofMillis(100)
+
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
+        val clock = mock<Clock> {
+            on { instant() }.thenReturn(instant)
+        }
+
+        runTest {
+            val reader = DataBaseReader.createDataBaseReader(
+                DataBaseReaderConfiguration(
+                    mapOf(
+                        DataSourceId("persons") to DataSourceConfiguration(
+                            mysql.jdbcUrl,
+                            mysql.username,
+                            mysql.password,
+                        )
+                    ),
+                    mapOf(
+                        QueryId("updates") to QueryConfiguration(
+                            "SELECT * FROM test_data.person WHERE id > \${id:integer}"
+                        )
+                    )
+                ),
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+                clock
+            )
+            val listener = mock<UpdateListener> { }
+            val taskId = reader.submitPullTask(
+                PullTableRequest(
+                    DataSourceId("persons"),
+                    false,
+                    ResetState(
+                        afterTime = resetTime
+                    ),
+                    null,
+                    mapOf("id" to listOf(persons.size.toString())),
+                    setOf("id"),
+                    QueryId("updates"),
+                    emptyMap(),
+                    interval,
+                ),
+                listener,
+            )
+
+            runCurrent()
+
+            val newData: List<Person> = (1..10).map { Person("new$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-new-data-$it".toByteArray()) }
+            insertData(newData)
+
+            advanceTimeBy(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(newData, interval.toMillis())
+            listener.assertCaptured(newData)
+            verify(messageLoader, never()).load(any(), isNull(), any())
+            verifyNoInteractions(genericRowListener)
+
+            clearInvocations(genericUpdateListener)
+            clearInvocations(listener)
+            `when`(clock.instant()).thenReturn(resetDate)
+            advanceTimeBy(interval.toMillis() * 2)
+
+            genericUpdateListener.assertCaptured(newData, interval.toMillis())
+            listener.assertCaptured(newData)
+            verify(messageLoader, never()).load(any(), isNull(), any())
+            verifyNoInteractions(genericRowListener)
+
+            reader.stopPullTask(taskId)
+            advanceUntilIdle()
+        }
+    }
+
+    private fun UpdateListener.assertCaptured(persons: List<Person>, timeout: Long = 0) {
         val tableRawCaptor = argumentCaptor<TableRow>()
         val propertiesCaptor = argumentCaptor<Map<String, String>>()
-        verify(this, times(persons.size)).onUpdate(any(), tableRawCaptor.capture(), propertiesCaptor.capture())
+        verify(this, timeout(timeout).times(persons.size)).onUpdate(any(), tableRawCaptor.capture(), propertiesCaptor.capture())
         tableRawCaptor.allValues.map {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
@@ -395,9 +557,9 @@ internal class DataBaseReaderIntegrationTest {
             assertNotNull(it[TH2_PULL_TASK_UPDATE_HASH_PROPERTY])
         }
     }
-    private fun RowListener.assertCaptured(persons: List<Person>) {
+    private fun RowListener.assertCaptured(persons: List<Person>, timeout: Long = 0) {
         val captor = argumentCaptor<TableRow>()
-        verify(this, times(persons.size)).onRow(any(), captor.capture())
+        verify(this, timeout(timeout).times(persons.size)).onRow(any(), captor.capture())
         captor.allValues.map {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
