@@ -18,17 +18,14 @@ package com.exactpro.th2.read.db.impl.grpc
 
 import com.exactpro.th2.common.message.toJavaDuration
 import com.exactpro.th2.common.message.toJson
-import com.exactpro.th2.common.util.toInstant
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.app.PullTableRequest
-import com.exactpro.th2.read.db.app.ResetState
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.grpc.DbPullRequest
-import com.exactpro.th2.read.db.grpc.DbPullResetState
 import com.exactpro.th2.read.db.grpc.DbPullResponse
 import com.exactpro.th2.read.db.grpc.QueryRequest
 import com.exactpro.th2.read.db.grpc.QueryResponse
@@ -37,14 +34,9 @@ import com.exactpro.th2.read.db.grpc.StopPullingRequest
 import com.exactpro.th2.read.db.impl.grpc.util.toGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
-import com.google.protobuf.util.Timestamps
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
-import java.time.Instant
-import java.time.LocalTime
-import java.time.ZoneOffset
-import java.time.temporal.ChronoField
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
@@ -80,7 +72,7 @@ class DataBaseReaderGrpcServer(
                     PullTableRequest(
                         sourceId.toModel(),
                         startFromLastReadRow,
-                        resetStateParameters.toResetState(),
+                        resetStateParameters.toModel(),
                         if (hasInitQueryId()) initQueryId.toModel() else null,
                         initParameters.toModel(),
                         useColumnsList.toSet(),
@@ -150,23 +142,5 @@ class DataBaseReaderGrpcServer(
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
-
-        internal fun DbPullResetState.toResetState(): ResetState {
-            val afterDate = if (hasAfterDate()) afterDate.toInstant() else null
-            val afterTime = if (hasAfterTime()) {
-                val instant: Instant = afterTime.toInstant()
-                check(
-                    instant.get(ChronoField.DAY_OF_MONTH) == 1
-                            && instant.get(ChronoField.MONTH_OF_YEAR) == 1
-                            && instant.get(ChronoField.YEAR) == 1970
-                ) {
-                    "'afterTime' field contains date units, expected '1970-01-01 ...', actual '${Timestamps.toString(afterTime)}'"
-                }
-                LocalTime.ofInstant(instant, ZoneOffset.UTC)
-            } else {
-                null
-            }
-            return ResetState(afterDate, afterTime)
-        }
     }
 }
