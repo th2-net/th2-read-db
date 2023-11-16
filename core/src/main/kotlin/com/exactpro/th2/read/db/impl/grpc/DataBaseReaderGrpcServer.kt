@@ -155,15 +155,14 @@ class DataBaseReaderGrpcServer(
             val afterDate = if (hasAfterDate()) afterDate.toInstant() else null
             val afterTime = if (hasAfterTime()) {
                 val instant: Instant = afterTime.toInstant()
-                LocalTime.ofInstant(instant, ZoneOffset.UTC).also { time ->
-                    if (
-                        instant.get(ChronoField.DAY_OF_MONTH) != 1
-                        || instant.get(ChronoField.MONTH_OF_YEAR) != 1
-                        || instant.get(ChronoField.YEAR) != 1970
-                    ) {
-                        LOGGER.warn { "Only '$time' time units of 'afterTime' is used from '${Timestamps.toString(afterTime)}' origin value, expected format '1970-01-01T??:??:??.??????Z'" }
-                    }
+                check(
+                    instant.get(ChronoField.DAY_OF_MONTH) == 1
+                            && instant.get(ChronoField.MONTH_OF_YEAR) == 1
+                            && instant.get(ChronoField.YEAR) == 1970
+                ) {
+                    "'afterTime' field contains date units, expected '1970-01-01 ...', actual '${Timestamps.toString(afterTime)}'"
                 }
+                LocalTime.ofInstant(instant, ZoneOffset.UTC)
             } else {
                 null
             }
