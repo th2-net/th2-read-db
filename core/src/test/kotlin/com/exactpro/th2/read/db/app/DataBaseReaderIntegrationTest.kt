@@ -49,7 +49,6 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.timeout
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.clearInvocations
@@ -61,6 +60,7 @@ import org.mockito.kotlin.same
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -445,7 +445,7 @@ internal class DataBaseReaderIntegrationTest {
 
             clearInvocations(genericUpdateListener)
             clearInvocations(listener)
-            `when`(clock.instant()).thenReturn(resetDate)
+            whenever(clock.instant()).thenReturn(resetDate)
             advanceTimeBy(interval.toMillis() * 2)
 
             genericUpdateListener.assertCaptured(newData, interval.toMillis())
@@ -526,7 +526,7 @@ internal class DataBaseReaderIntegrationTest {
 
             clearInvocations(genericUpdateListener)
             clearInvocations(listener)
-            `when`(clock.instant()).thenReturn(resetDate)
+            whenever(clock.instant()).thenReturn(resetDate)
             advanceTimeBy(interval.toMillis() * 2)
 
             genericUpdateListener.assertCaptured(newData, interval.toMillis())
