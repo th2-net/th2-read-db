@@ -16,9 +16,11 @@
 
 package com.exactpro.th2.read.db.core.impl
 
+import com.exactpro.th2.read.db.app.ResetState
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
+import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.calculateNearestResetDate
 import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.HashService
 import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
@@ -39,13 +41,16 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 class DataBaseMonitorServiceImpl(
     private val dataBaseService: DataBaseService,
     private val hashService: HashService,
+    private val clock: Clock,
 ) : DataBaseMonitorService {
     private val ids = AtomicInteger(1)
     private val runningTasks: MutableMap<TaskId, TaskHolder> = ConcurrentHashMap()
@@ -54,6 +59,7 @@ class DataBaseMonitorServiceImpl(
     override fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
         startFromLastReadRow: Boolean,
+        resetStateParameters: ResetState,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -73,11 +79,12 @@ class DataBaseMonitorServiceImpl(
                     poolUpdates(
                         dataSourceId,
                         startFromLastReadRow,
+                        resetStateParameters,
                         initQueryId,
                         initParameters,
                         useColumns,
                         updateParameters,
-                        interval,
+                        interval.toMillis(),
                         updateQueryId,
                         updateListener,
                         messageLoader
@@ -108,11 +115,12 @@ class DataBaseMonitorServiceImpl(
     private suspend fun poolUpdates(
         dataSourceId: DataSourceId,
         startFromLastReadRow: Boolean,
+        resetStateParameters: ResetState,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
         updateParameters: QueryParametersValues,
-        interval: Duration,
+        intervalMilliseconds: Long,
         updateQueryId: QueryId,
         updateListener: UpdateListener,
         messageLoader: MessageLoader
@@ -120,32 +128,47 @@ class DataBaseMonitorServiceImpl(
         val properties = mapOf(
             TH2_PULL_TASK_UPDATE_HASH_PROPERTY to hashService.calculateHash(dataSourceId, updateQueryId).toString()
         )
+        val finalParameters: MutableMap<String, Collection<String>> = hashMapOf()
+        var lastResetTime = Instant.MIN
+        var firstIteration = true
 
-        val lastRow: TableRow? = when(startFromLastReadRow) {
-            true -> messageLoader.load(dataSourceId, properties)
-            else -> null
-        } ?: initQueryId?.let { queryId ->
-            dataBaseService.executeQuery(
-                dataSourceId,
-                queryId,
-                initParameters,
-            ).lastOrNull()
-        }
-
-        fun updateParameters(lastRow: TableRow): QueryParametersValues {
+        fun extractParameters(lastRow: TableRow): QueryParametersValues {
             return useColumns.associateWith {
                 val value = lastRow.columns[it] ?: error("Missing required parameter $it from init query result $lastRow")
                 listOf(value.toString())
             }
         }
 
-        val finalParameters: MutableMap<String, Collection<String>> = if (lastRow == null) {
-            updateParameters.toMutableMap().apply { putAll(initParameters) }
-        } else {
-            updateParameters.toMutableMap().apply { putAll(updateParameters(lastRow)) }
-        }
         do {
-            delay(interval.toMillis())
+            val now = clock.instant()
+            val resetDate = resetStateParameters.calculateNearestResetDate(now)
+            if (firstIteration || (resetDate != null && lastResetTime < resetDate)) {
+                LOGGER.info { "Initialize update query parameters, is first: $firstIteration, nearest reset: $resetDate, last reset: $lastResetTime" }
+                firstIteration = false
+                lastResetTime = now
+
+                finalParameters.apply {
+                    clear()
+                    putAll(updateParameters)
+                }
+
+                val lastRow: TableRow? = when(startFromLastReadRow) {
+                    true -> messageLoader.load(dataSourceId, resetDate, properties)
+                    else -> null
+                } ?: initQueryId?.let { queryId ->
+                    dataBaseService.executeQuery(
+                        dataSourceId,
+                        queryId,
+                        initParameters,
+                    ).lastOrNull()
+                }
+
+                if (lastRow == null) {
+                    finalParameters.putAll(initParameters)
+                } else {
+                    finalParameters.putAll(extractParameters(lastRow))
+                }
+            }
 
             try {
                 dataBaseService.executeQuery(
@@ -157,11 +180,13 @@ class DataBaseMonitorServiceImpl(
                 }.onCompletion { reason ->
                     reason?.also { updateListener.onError(dataSourceId, it) }
                 }.lastOrNull()?.also {
-                    finalParameters.putAll(updateParameters(it))
+                    finalParameters.putAll(extractParameters(it))
                 }
             } catch (ex: Exception) {
                 updateListener.onError(dataSourceId, ex)
             }
+
+            delay(intervalMilliseconds)
         } while (currentCoroutineContext().isActive)
     }
 

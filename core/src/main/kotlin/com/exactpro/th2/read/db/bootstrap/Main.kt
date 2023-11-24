@@ -45,6 +45,8 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import com.google.protobuf.Timestamp
+import com.google.protobuf.util.Timestamps
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -195,14 +197,23 @@ private fun createMessageLoader(
     componentBookName: String
 ) = runCatching {
     MessageSearcher.create(factory.grpcRouter.getService(DataProviderService::class.java)).run {
-        MessageLoader { dataSourceId, properties ->
+        MessageLoader { dataSourceId, horizon, properties ->
+            val horizonTimestamp: Timestamp? = horizon?.toTimestamp()
+            val searcherInterval: Duration = horizon?.let {
+                // FIXME: add overload with explicit end time for findLastOrNull method
+                Duration.between(it, Instant.now()).plusHours(1)
+            } ?: Duration.ofDays(1)
+
             findLastOrNull(
                 book = componentBookName,
                 sessionAlias = dataSourceId.id,
                 direction = FIRST,
-                searchInterval = Duration.ofDays(1),
+                searchInterval = searcherInterval,
             ) {
-                properties.all { (key, value) -> it.message.getMessagePropertiesOrDefault(key, null) == value }
+                with(it.message) {
+                    (horizon?.let { Timestamps.compare(horizonTimestamp, messageId.timestamp) < 0 } ?: true)
+                            && properties.all { (key, value) -> getMessagePropertiesOrDefault(key, null) == value }
+                }
             }?.toTableRow()
         }
     }

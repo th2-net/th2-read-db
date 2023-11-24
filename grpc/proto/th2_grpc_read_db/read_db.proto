@@ -4,6 +4,7 @@ package th2.read_db;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "com.exactpro.th2.read.db.grpc";
@@ -51,6 +52,12 @@ message DbPullRequest {
   google.protobuf.Duration pull_interval = 7;
   AssociatedMessageType associated_message_type = 8;
   bool start_from_last_read_row = 9;
+  DbPullResetState reset_state_parameters = 10;
+}
+
+message DbPullResetState {
+  google.protobuf.Timestamp after_date = 1;
+  google.protobuf.Timestamp after_time = 2; // Only time units matter, value must contains '1970-01-01' date
 }
 
 message PullTaskId {

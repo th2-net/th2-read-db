@@ -23,6 +23,8 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
+import java.time.Instant
+import java.time.LocalTime
 
 class DataBaseReaderConfiguration(
     val dataSources: Map<DataSourceId, DataSourceConfiguration>,
@@ -57,6 +59,7 @@ data class ReadTaskConfiguration(
 data class PullTaskConfiguration(
     val dataSource: DataSourceId,
     val startFromLastReadRow: Boolean = false,
+    val resetStateParameters: ResetState = ResetState(),
     val initQueryId: QueryId?,
     val initParameters: QueryParametersValues = emptyMap(),
     val updateQueryId: QueryId,
@@ -64,6 +67,11 @@ data class PullTaskConfiguration(
     val updateParameters: QueryParametersValues = emptyMap(),
     val interval: Long,
 ) : StartupTaskConfiguration
+
+data class ResetState(
+    val afterDate: Instant? = null,
+    val afterTime: LocalTime? = null,
+)
 
 fun DataBaseReaderConfiguration.validate(): List<String> {
     val sourceIDs = dataSources.keys

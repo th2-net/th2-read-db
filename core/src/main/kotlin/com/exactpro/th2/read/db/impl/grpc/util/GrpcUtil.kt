@@ -16,13 +16,21 @@
 
 package com.exactpro.th2.read.db.impl.grpc.util
 
+import com.exactpro.th2.common.util.toInstant
+import com.exactpro.th2.read.db.app.ResetState
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TaskId
+import com.exactpro.th2.read.db.grpc.DbPullResetState
 import com.exactpro.th2.read.db.grpc.PullTaskId
 import com.exactpro.th2.read.db.grpc.QueryId
 import com.exactpro.th2.read.db.grpc.QueryParameters
 import com.exactpro.th2.read.db.grpc.SourceId
+import com.google.protobuf.util.Timestamps
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.temporal.ChronoField
 
 fun SourceId.toModel(): DataSourceId = DataSourceId(id)
 
@@ -33,3 +41,21 @@ fun QueryParameters.toModel(): QueryParametersValues = valuesMap.mapValues { lis
 fun PullTaskId.toModel(): TaskId = TaskId(id)
 
 fun TaskId.toGrpc(): PullTaskId = PullTaskId.newBuilder().setId(id).build()
+
+fun DbPullResetState.toModel(): ResetState {
+    val afterDate = if (hasAfterDate()) afterDate.toInstant() else null
+    val afterTime = if (hasAfterTime()) {
+        val instant: Instant = afterTime.toInstant()
+        check(
+            instant.get(ChronoField.DAY_OF_MONTH) == 1
+                    && instant.get(ChronoField.MONTH_OF_YEAR) == 1
+                    && instant.get(ChronoField.YEAR) == 1970
+        ) {
+            "'afterTime' field contains date units, expected '1970-01-01 ...', actual '${Timestamps.toString(afterTime)}'"
+        }
+        LocalTime.ofInstant(instant, ZoneOffset.UTC)
+    } else {
+        null
+    }
+    return ResetState(afterDate, afterTime)
+}

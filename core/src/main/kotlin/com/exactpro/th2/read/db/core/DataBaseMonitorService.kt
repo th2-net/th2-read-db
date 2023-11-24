@@ -16,13 +16,20 @@
 
 package com.exactpro.th2.read.db.core
 
+import com.exactpro.th2.read.db.app.ResetState
 import kotlinx.coroutines.CoroutineScope
+import mu.KotlinLogging
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 
 interface DataBaseMonitorService : AutoCloseable {
     fun CoroutineScope.submitTask(
         dataSourceId: DataSourceId,
         startFromLastReadRow: Boolean,
+        resetStateParameters: ResetState,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
         useColumns: Set<String>,
@@ -36,6 +43,47 @@ interface DataBaseMonitorService : AutoCloseable {
     suspend fun cancelTask(id: TaskId)
 
     companion object {
+        private val LOGGER = KotlinLogging.logger { }
         internal const val TH2_PULL_TASK_UPDATE_HASH_PROPERTY = "th2.pull_task.update_hash"
+
+        /**
+         * Calculates the nearest reset date before or equal [current]. [current] time is excluded
+         * @return null when:<br>
+         *   * [ResetState.afterDate] and [ResetState.afterTime] are null
+         *   * [ResetState.afterDate] is after [current] and [ResetState.afterTime] is null
+         *
+         * otherwise [Instant]
+         */
+        internal fun ResetState.calculateNearestResetDate(current: Instant): Instant? {
+            val boundaryByAfterDate: Instant = afterDate?.let {
+                if (it > current) {
+                    null
+                } else {
+                    it
+                }
+            } ?: Instant.MIN
+            val boundaryAfterTime: Instant = afterTime?.let {
+                val currentRestDate = current.withTime(it)
+                if (currentRestDate > current) {
+                    currentRestDate.minus(1L, ChronoUnit.DAYS)
+                } else {
+                    currentRestDate
+                }
+
+            } ?: Instant.MIN
+
+            val result: Instant = maxOf(boundaryByAfterDate, boundaryAfterTime)
+
+            return (if (result == Instant.MIN) null else result).also {
+                LOGGER.trace { "Calculated nearest reset date, result: $it, data boundary: $boundaryByAfterDate, time boundary: $boundaryAfterTime, after date: $afterDate, after time: $afterTime, now: $current" }
+            }
+        }
+
+        private fun Instant.withTime(time: LocalTime): Instant = atZone(ZoneOffset.UTC)
+            .withHour(time.hour)
+            .withMinute(time.minute)
+            .withSecond(time.second)
+            .withNano(time.nano)
+            .toInstant()
     }
 }
