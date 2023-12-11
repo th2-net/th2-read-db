@@ -53,6 +53,10 @@ message DbPullRequest {
   AssociatedMessageType associated_message_type = 8;
   bool start_from_last_read_row = 9;
   DbPullResetState reset_state_parameters = 10;
+  repeated QueryId before_init_query_ids = 11;
+  repeated QueryId after_init_query_ids = 12;
+  repeated QueryId before_update_query_ids = 13;
+  repeated QueryId after_update_query_ids = 14;
 }
 
 message DbPullResetState {

@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import mu.KotlinLogging
 import java.sql.Clob
+import java.sql.Connection
 import java.sql.Date
 import java.sql.ResultSet
 import java.sql.Time
@@ -46,36 +47,32 @@ class DataBaseServiceImpl(
 ) : DataBaseService {
     override fun executeQuery(
         dataSourceId: DataSourceId,
+        before: List<QueryId>,
         queryId: QueryId,
-        parameters: QueryParametersValues,
+        after: List<QueryId>,
+        parameters: QueryParametersValues
     ): Flow<TableRow> {
         LOGGER.info { "Executing query $queryId for $dataSourceId connection with $parameters parameters without default" }
         val dataSource: DataSource = dataSourceProvider[dataSourceId].dataSource
         val queryHolder: QueryHolder = queriesProvider[queryId]
+        val beforeQueryHolders: List<QueryHolder> = before.map(queriesProvider::get)
+        val afterQueryHolders: List<QueryHolder> = after.map(queriesProvider::get)
         val connection = dataSource.connection
         val finalParameters = queryHolder.defaultParameters.toMutableMap().apply {
             putAll(parameters)
         }
         LOGGER.trace { "Final execution parameters: $finalParameters" }
         val resultSet: ResultSet = try {
-            connection.prepareStatement(queryHolder.query).run {
-                queryHolder.parameters.forEach { (name, typeInfos) ->
-                    typeInfos.forEach { typeInfo ->
-                        val values = finalParameters[name]
-                        when {
-                            values == null -> set(typeInfo.index, null, typeInfo.type)
-                            values.size == 1 -> set(typeInfo.index, values.first(), typeInfo.type)
-                            else -> setCollection(typeInfo.index, connection.createArrayOf(typeInfo.type.name, values.toTypedArray()))
-                        }
-                    }
-                }
-                LOGGER.debug { "Native query: $this" }
-                executeQuery()
+            beforeQueryHolders.forEach { holder ->
+                execute(connection, holder, finalParameters)
             }
+
+            execute(connection, queryHolder, finalParameters)
         } catch (ex: Exception) {
             connection.close()
             throw QueryExecutionException("cannot execute $queryId query for $dataSourceId connection", ex)
         }
+
         val associatedMessageType: String? = queryHolder.associatedMessageType
         return flow {
             var columns: Collection<String>? = null
@@ -87,9 +84,38 @@ class DataBaseServiceImpl(
             }
         }.onCompletion { reason ->
             reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
+
+            runCatching {
+                afterQueryHolders.forEach { holder ->
+                    execute(connection, holder, finalParameters)
+                }
+            }.onFailure { LOGGER.error(it) { "After update requests failure $dataSourceId" } }
+
             LOGGER.trace { "Closing connection to $dataSourceId" }
             runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
         }
+    }
+
+    private fun execute(
+        connection: Connection,
+        holder: QueryHolder,
+        parameters: Map<String, Collection<String>>
+    ): ResultSet = connection.prepareStatement(holder.query).run {
+        holder.parameters.forEach { (name, typeInfoList) ->
+            typeInfoList.forEach { typeInfo ->
+                val values = parameters[name]
+                when {
+                    values == null -> set(typeInfo.index, null, typeInfo.type)
+                    values.size == 1 -> set(typeInfo.index, values.first(), typeInfo.type)
+                    else -> setCollection(
+                        typeInfo.index,
+                        connection.createArrayOf(typeInfo.type.name, values.toTypedArray())
+                    )
+                }
+            }
+        }
+        LOGGER.trace { "Execute query: $holder" }
+        executeQuery()
     }
 
     companion object {
