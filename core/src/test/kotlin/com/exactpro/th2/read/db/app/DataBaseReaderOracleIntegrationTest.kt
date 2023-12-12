@@ -38,6 +38,7 @@ import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -134,9 +135,9 @@ internal class DataBaseReaderOracleIntegrationTest {
                         )
                     ),
                     mapOf(
-                        QueryId("add-supplemental-log") to QueryConfiguration(
-                            // FIXME: enable for specific table
-                            "ALTER DATABASE ADD SUPPLEMENTAL LOG DATA"
+                        QueryId("add-supplemental-log-for-table") to QueryConfiguration(
+                            // add-supplemental-log for all tables: 'ALTER DATABASE ADD SUPPLEMENTAL LOG DATA'
+                            "ALTER TABLE $TABLE_SPACE.$TABLE_NAME ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS"
                         ),
                         QueryId("start-log-miner") to QueryConfiguration(
                             // FIXME: add timestamp limitation
@@ -161,7 +162,7 @@ internal class DataBaseReaderOracleIntegrationTest {
                     DataSourceId("persons"),
                     startFromLastReadRow = false,
                     resetStateParameters = ResetState(),
-                    beforeInitQueryIds = listOf(QueryId("add-supplemental-log")),
+                    beforeInitQueryIds = listOf(QueryId("add-supplemental-log-for-table")),
                     initQueryId = null,
                     initParameters = mapOf("SCN" to listOf("-1")),
                     afterInitQueryIds = emptyList(),
@@ -246,14 +247,14 @@ internal class DataBaseReaderOracleIntegrationTest {
             with(historyEntity.data) {
                 when (historyEntity.operation) {
                     INSERT -> {
-                        assertEquals(
-                            "insert into \"$TABLE_SPACE\".\"$TABLE_NAME\"(\"ID\",\"NAME\",\"BIRTHDAY\",\"DATA\") " +
-                                    "values ('$id','$name',TO_DATE('${
-                                        FORMATTER.format(birthday).uppercase()
-                                    }', 'DD-MON-RR'),HEXTORAW('${data.toHex()}'));",
-                            sql,
-                            "${historyEntity.operation}: query check in $index row"
-                        )
+                        val regex = Regex("insert into \"$TABLE_SPACE\".\"$TABLE_NAME\"" +
+                                "\\(\"ID\",\"NAME\",\"BIRTHDAY\",\"DATA\"\\) " +
+                                "values \\('$id','$name',TO_DATE\\('${
+                                    FORMATTER.format(birthday).uppercase()
+                                }', 'DD-MON-RR'\\),HEXTORAW\\('${data.toHex()}'\\)\\);")
+                        assertTrue(regex matches sql) {
+                            "${historyEntity.operation}: query check in $index row, source '$sql', regex: $regex"
+                        }
                         dataBaseEntries[id] = DataBaseEntity(rowId, this)
                     }
 
@@ -266,15 +267,16 @@ internal class DataBaseReaderOracleIntegrationTest {
                             rowId,
                             "${historyEntity.operation}: ROW_ID check in $index row"
                         )
-                        assertEquals(
-                            "update \"$TABLE_SPACE\".\"$TABLE_NAME\" set \"NAME\" = '$name', \"DATA\" = HEXTORAW('${data.toHex()}') " +
-                                    "where \"NAME\" = '${dataBaseEntity.data.name}' and \"DATA\" = HEXTORAW('${dataBaseEntity.data.data.toHex()}') and ROWID = '${dataBaseEntity.rowId}';",
-                            sql,
-                            "${historyEntity.operation}: query check in $index row"
-                        )
+                        val regex = Regex("update \"$TABLE_SPACE\".\"$TABLE_NAME\" " +
+                                "set \"NAME\" = '$name', \"DATA\" = HEXTORAW\\('${data.toHex()}'\\) " +
+                                "where \"NAME\" = '${dataBaseEntity.data.name}' " +
+                                "and \"DATA\" = HEXTORAW\\('${dataBaseEntity.data.data.toHex()}'\\) " +
+                                "and ROWID = '${dataBaseEntity.rowId}';")
+                        assertTrue(regex matches sql) {
+                            "${historyEntity.operation}: query check in $index row, source '$sql', regex: $regex"
+                        }
                         dataBaseEntries[id] = DataBaseEntity(rowId, this)
                     }
-
                     DELETE -> {
                         val dataBaseEntity = checkNotNull(dataBaseEntries[id]) {
                             "${historyEntity.operation}: source database entry doesn't found for $id id in $index row"
@@ -284,16 +286,17 @@ internal class DataBaseReaderOracleIntegrationTest {
                             rowId,
                             "${historyEntity.operation}: ROW_ID check in $index row"
                         )
-                        assertEquals(
-                            "delete from \"$TABLE_SPACE\".\"$TABLE_NAME\" " +
-                                    "where \"ID\" = '${dataBaseEntity.data.id}' and \"NAME\" = '${dataBaseEntity.data.name}' and \"BIRTHDAY\" = TO_DATE('${
-                                        FORMATTER.format(
-                                            dataBaseEntity.data.birthday
-                                        ).uppercase()
-                                    }', 'DD-MON-RR') and ROWID = '${dataBaseEntity.rowId}';",
-                            sql,
-                            "${historyEntity.operation}: query check in $index row"
-                        )
+                        val regex = Regex("delete from \"$TABLE_SPACE\".\"$TABLE_NAME\" " +
+                                "where \"ID\" = '${dataBaseEntity.data.id}' " +
+                                "and \"NAME\" = '${dataBaseEntity.data.name}' " +
+                                "and \"BIRTHDAY\" = TO_DATE\\('${
+                                    FORMATTER.format(dataBaseEntity.data.birthday).uppercase()
+                                }', 'DD-MON-RR'\\) " +
+                                "and ROWID = '${dataBaseEntity.rowId}';")
+                        assertTrue(regex matches sql) {
+                            "${historyEntity.operation}: query check in $index row, source '$sql', regex: $regex"
+                        }
+                        dataBaseEntries.remove(id)
                     }
                 }
             }

@@ -64,7 +64,13 @@ class DataBaseServiceImpl(
         LOGGER.trace { "Final execution parameters: $finalParameters" }
         val resultSet: ResultSet = try {
             beforeQueryHolders.forEach { holder ->
-                execute(connection, holder, finalParameters)
+                runCatching {
+                    execute(connection, holder, finalParameters)
+                }.getOrElse {
+                    throw QueryExecutionException(
+                        "cannot execute ${holder.query} before query for $dataSourceId connection", it
+                    )
+                }
             }
 
             execute(connection, queryHolder, finalParameters)
@@ -83,16 +89,23 @@ class DataBaseServiceImpl(
                 emit(resultSet.transform(columns, associatedMessageType))
             }
         }.onCompletion { reason ->
-            reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
+            try {
+                reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
 
-            runCatching {
                 afterQueryHolders.forEach { holder ->
-                    execute(connection, holder, finalParameters)
+                    runCatching {
+                        execute(connection, holder, finalParameters)
+                    }.getOrElse {
+                        throw QueryExecutionException(
+                            "cannot execute ${holder.query} after query for $dataSourceId connection", it
+                        )
+                    }
                 }
-            }.onFailure { LOGGER.error(it) { "After update requests failure $dataSourceId" } }
 
-            LOGGER.trace { "Closing connection to $dataSourceId" }
-            runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
+                LOGGER.trace { "Closing connection to $dataSourceId" }
+            } finally {
+                runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
+            }
         }
     }
 
