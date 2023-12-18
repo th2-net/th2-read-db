@@ -32,6 +32,8 @@ message QueryRequest {
   QueryId query_id = 2;
   QueryParameters parameters = 3;
   AssociatedMessageType associated_message_type = 4;
+  repeated QueryId before_query_ids = 5;
+  repeated QueryId after_query_ids = 6;
 }
 
 message QueryResponse {

@@ -23,7 +23,9 @@ import java.time.Duration
 
 class ExecuteQueryRequest(
     val sourceId: DataSourceId,
+    val before: List<QueryId>,
     val queryId: QueryId,
+    val after: List<QueryId>,
     val parameters: QueryParametersValues,
 )
 

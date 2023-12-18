@@ -50,7 +50,9 @@ class DataBaseReaderGrpcServer(
                 request.run {
                     ExecuteQueryRequest(
                         sourceId.toModel(),
+                        beforeQueryIdsList.map(ProtoQueryId::toModel),
                         queryId.toModel(),
+                        afterQueryIdsList.map(ProtoQueryId::toModel),
                         parameters.toModel(),
                     )
                 },

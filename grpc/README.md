@@ -10,6 +10,7 @@ You can:
 
 ## 0.0.6
 + added before_init_query_ids, after_init_query_ids, before_update_query_ids, after_update_query_ids to the DbPullRequest
++ added before_query_ids, after_query_ids to the QueryRequest
 
 ## 0.0.5
 + added DbPullRequest.reset_state_parameters field

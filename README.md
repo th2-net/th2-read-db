@@ -169,8 +169,8 @@ spec:
         dataSource: persons
         queryId: all
         parameters:
-          name:
-            - Ivan
+          birthday:
+            - 1997-02-01
       - type: pull
         dataSource: persons
         initQueryId: current_state
@@ -242,8 +242,8 @@ spec:
         dataSource: persons
         queryId: all
         parameters:
-          name:
-            - Ivan
+          birthday:
+            - 1997-02-01
       - type: pull
         dataSource: persons
         startFromLastReadRow: false

@@ -97,7 +97,7 @@ class DataBaseReader(
     ) {
         scope.launch {
             with(request) {
-                dataBaseService.executeQuery(sourceId, emptyList(), queryId, emptyList(), parameters)
+                dataBaseService.executeQuery(sourceId, before, queryId, after, parameters)
                     .onCompletion {
                         if (it == null) {
                             listener.onComplete()
