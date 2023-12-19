@@ -58,7 +58,9 @@ class DataBaseReader(
                     LOGGER.info { "Launching read task from ${task.dataSource} with ${task.queryId} query" }
                     dataBaseService.executeQuery(
                         task.dataSource,
+                        emptyList(),
                         task.queryId,
+                        emptyList(),
                         task.parameters,
                     ).collect { it.transferTo(task.dataSource, rowListener) }
                 }
@@ -69,11 +71,15 @@ class DataBaseReader(
                         task.dataSource,
                         task.startFromLastReadRow,
                         task.resetStateParameters,
+                        task.beforeInitQueryIds,
                         task.initQueryId,
                         task.initParameters,
+                        task.afterInitQueryIds,
                         task.useColumns,
+                        task.beforeUpdateQueryIds,
                         task.updateQueryId,
                         task.updateParameters,
+                        task.afterUpdateQueryIds,
                         pullingListener,
                         messageLoader,
                         Duration.ofMillis(task.interval),
@@ -91,7 +97,7 @@ class DataBaseReader(
     ) {
         scope.launch {
             with(request) {
-                dataBaseService.executeQuery(sourceId, queryId, parameters)
+                dataBaseService.executeQuery(sourceId, before, queryId, after, parameters)
                     .onCompletion {
                         if (it == null) {
                             listener.onComplete()
@@ -116,11 +122,15 @@ class DataBaseReader(
                     dataSourceId,
                     startFromLastReadRow,
                     resetStateParameters,
+                    beforeInitQueryIds,
                     initQueryId,
                     initParameters,
+                    afterInitQueryIds,
                     useColumns,
+                    beforeUpdateQueryIds,
                     updateQueryId,
                     updateParameters,
+                    afterUpdateQueryIds,
                     wrap(rowTransformer, updateListener, pullingListener),
                     messageLoader,
                     interval,

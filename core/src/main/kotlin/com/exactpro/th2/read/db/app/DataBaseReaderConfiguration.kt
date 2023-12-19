@@ -60,11 +60,15 @@ data class PullTaskConfiguration(
     val dataSource: DataSourceId,
     val startFromLastReadRow: Boolean = false,
     val resetStateParameters: ResetState = ResetState(),
+    val beforeInitQueryIds: List<QueryId> = emptyList(),
     val initQueryId: QueryId?,
     val initParameters: QueryParametersValues = emptyMap(),
+    val afterInitQueryIds: List<QueryId> = emptyList(),
+    val beforeUpdateQueryIds: List<QueryId> = emptyList(),
     val updateQueryId: QueryId,
-    val useColumns: Set<String> = emptySet(),
     val updateParameters: QueryParametersValues = emptyMap(),
+    val afterUpdateQueryIds: List<QueryId> = emptyList(),
+    val useColumns: Set<String> = emptySet(),
     val interval: Long,
 ) : StartupTaskConfiguration
 

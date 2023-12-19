@@ -1,4 +1,4 @@
-# th2-read-db 0.5.0
+# th2-read-db 0.6.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -169,8 +169,8 @@ spec:
         dataSource: persons
         queryId: all
         parameters:
-          name:
-            - Ivan
+          birthday:
+            - 1997-02-01
       - type: pull
         dataSource: persons
         initQueryId: current_state
@@ -242,8 +242,8 @@ spec:
         dataSource: persons
         queryId: all
         parameters:
-          name:
-            - Ivan
+          birthday:
+            - 1997-02-01
       - type: pull
         dataSource: persons
         startFromLastReadRow: false
@@ -289,6 +289,12 @@ spec:
 ```
 
 ## Changes
+
+### 0.6.0
+
+#### Feature:
+
++ added beforeInitQueryIds, afterInitQueryIds, beforeUpdateQueryIds, afterUpdateQueryIds properties into config
 
 ### 0.5.0
 

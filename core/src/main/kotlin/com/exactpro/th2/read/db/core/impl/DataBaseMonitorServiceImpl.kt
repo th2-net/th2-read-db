@@ -60,11 +60,15 @@ class DataBaseMonitorServiceImpl(
         dataSourceId: DataSourceId,
         startFromLastReadRow: Boolean,
         resetStateParameters: ResetState,
+        beforeInitQueryIds: List<QueryId>,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
+        afterInitQueryIds: List<QueryId>,
         useColumns: Set<String>,
+        beforeUpdateQueryIds: List<QueryId>,
         updateQueryId: QueryId,
         updateParameters: QueryParametersValues,
+        afterUpdateQueryIds: List<QueryId>,
         updateListener: UpdateListener,
         messageLoader: MessageLoader,
         interval: Duration,
@@ -80,12 +84,16 @@ class DataBaseMonitorServiceImpl(
                         dataSourceId,
                         startFromLastReadRow,
                         resetStateParameters,
+                        beforeInitQueryIds,
                         initQueryId,
                         initParameters,
+                        afterInitQueryIds,
                         useColumns,
                         updateParameters,
                         interval.toMillis(),
+                        beforeUpdateQueryIds,
                         updateQueryId,
+                        afterUpdateQueryIds,
                         updateListener,
                         messageLoader
                     )
@@ -116,12 +124,16 @@ class DataBaseMonitorServiceImpl(
         dataSourceId: DataSourceId,
         startFromLastReadRow: Boolean,
         resetStateParameters: ResetState,
+        beforeInitQueryIds: List<QueryId>,
         initQueryId: QueryId?,
         initParameters: QueryParametersValues,
+        afterInitQueryIds: List<QueryId>,
         useColumns: Set<String>,
         updateParameters: QueryParametersValues,
         intervalMilliseconds: Long,
+        beforeUpdateQueryIds: List<QueryId>,
         updateQueryId: QueryId,
+        afterUpdateQueryIds: List<QueryId>,
         updateListener: UpdateListener,
         messageLoader: MessageLoader
     ) {
@@ -158,7 +170,9 @@ class DataBaseMonitorServiceImpl(
                 } ?: initQueryId?.let { queryId ->
                     dataBaseService.executeQuery(
                         dataSourceId,
+                        beforeInitQueryIds,
                         queryId,
+                        afterInitQueryIds,
                         initParameters,
                     ).lastOrNull()
                 }
@@ -173,7 +187,9 @@ class DataBaseMonitorServiceImpl(
             try {
                 dataBaseService.executeQuery(
                     dataSourceId,
+                    beforeUpdateQueryIds,
                     updateQueryId,
+                    afterUpdateQueryIds,
                     finalParameters,
                 ).onEach {
                     updateListener.onUpdate(dataSourceId, it, properties)

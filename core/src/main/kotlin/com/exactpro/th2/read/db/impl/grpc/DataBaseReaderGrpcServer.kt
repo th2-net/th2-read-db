@@ -37,6 +37,7 @@ import com.google.protobuf.Empty
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
+import com.exactpro.th2.read.db.grpc.QueryId as ProtoQueryId
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
@@ -49,7 +50,9 @@ class DataBaseReaderGrpcServer(
                 request.run {
                     ExecuteQueryRequest(
                         sourceId.toModel(),
+                        beforeQueryIdsList.map(ProtoQueryId::toModel),
                         queryId.toModel(),
+                        afterQueryIdsList.map(ProtoQueryId::toModel),
                         parameters.toModel(),
                     )
                 },
@@ -73,11 +76,15 @@ class DataBaseReaderGrpcServer(
                         sourceId.toModel(),
                         startFromLastReadRow,
                         resetStateParameters.toModel(),
+                        beforeInitQueryIdsList.map(ProtoQueryId::toModel),
                         if (hasInitQueryId()) initQueryId.toModel() else null,
                         initParameters.toModel(),
+                        afterInitQueryIdsList.map(ProtoQueryId::toModel),
                         useColumnsList.toSet(),
+                        beforeUpdateQueryIdsList.map(ProtoQueryId::toModel),
                         updateQueryId.toModel(),
                         updateParameters.toModel(),
+                        afterUpdateQueryIdsList.map(ProtoQueryId::toModel),
                         pullInterval.toJavaDuration(),
                     )
                 },

@@ -23,7 +23,9 @@ import java.time.Duration
 
 class ExecuteQueryRequest(
     val sourceId: DataSourceId,
+    val before: List<QueryId>,
     val queryId: QueryId,
+    val after: List<QueryId>,
     val parameters: QueryParametersValues,
 )
 
@@ -31,10 +33,14 @@ class PullTableRequest(
     val dataSourceId: DataSourceId,
     val startFromLastReadRow: Boolean,
     val resetStateParameters: ResetState,
+    val beforeInitQueryIds: List<QueryId>,
     val initQueryId: QueryId?,
     val initParameters: QueryParametersValues,
+    val afterInitQueryIds: List<QueryId>,
     val useColumns: Set<String>,
+    val beforeUpdateQueryIds: List<QueryId>,
     val updateQueryId: QueryId,
     val updateParameters: QueryParametersValues,
+    val afterUpdateQueryIds: List<QueryId>,
     val interval: Duration,
 )

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.core
+package com.exactpro.th2.read.db.containers
 
-import kotlinx.coroutines.flow.Flow
+import org.testcontainers.containers.OracleContainer
+import org.testcontainers.utility.DockerImageName
 
-interface DataBaseService {
-    fun executeQuery(
-        dataSourceId: DataSourceId,
-        before: List<QueryId>,
-        queryId: QueryId,
-        after: List<QueryId>,
-        parameters: QueryParametersValues,
-    ): Flow<TableRow>
-}
+class OracleContainer : OracleContainer(DockerImageName.parse("gvenzl/oracle-xe:21-slim-faststart"))

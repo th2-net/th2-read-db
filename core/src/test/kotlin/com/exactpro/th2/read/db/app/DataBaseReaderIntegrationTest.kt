@@ -47,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.timeout
 import org.mockito.kotlin.any
@@ -124,8 +125,17 @@ internal class DataBaseReaderIntegrationTest {
         }
     }
 
-    @Test
-    fun `receives data from database`() {
+    @ParameterizedTest
+    @CsvSource(
+        "'',''",
+        "'count',''",
+        "'','count'",
+        "'count','count'",
+        "'count,count-all',''",
+        "'','count,count-all'",
+        "'count,count-all','count,count-all'",
+    )
+    fun `receives data from database`(beforeList: String, afterList: String) {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
         val messageLoader = mock<MessageLoader> { }
@@ -145,6 +155,15 @@ internal class DataBaseReaderIntegrationTest {
                             mapOf(
                                 "birthday" to listOf("1996-10-31")
                             )
+                        ),
+                        QueryId("count") to QueryConfiguration(
+                            "SELECT COUNT(*) FROM test_data.person WHERE birthday > \${birthday:date}",
+                            mapOf(
+                                "birthday" to listOf("1996-10-31")
+                            )
+                        ),
+                        QueryId("count-all") to QueryConfiguration(
+                            "SELECT COUNT(*) FROM test_data.person"
                         )
                     )
                 ),
@@ -157,7 +176,9 @@ internal class DataBaseReaderIntegrationTest {
             reader.executeQuery(
                 ExecuteQueryRequest(
                     DataSourceId("persons"),
+                    beforeList.split(',').filter(String::isNotEmpty).map(::QueryId),
                     QueryId("all"),
+                    afterList.split(',').filter(String::isNotEmpty).map(::QueryId),
                     emptyMap()
                 ),
                 listener
@@ -204,14 +225,18 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
-                    false,
-                    ResetState(),
-                    QueryId("current_state"),
-                    emptyMap(),
-                    setOf("id"),
-                    QueryId("updates"),
-                    emptyMap(),
-                    interval,
+                    startFromLastReadRow = false,
+                    resetStateParameters = ResetState(),
+                    beforeInitQueryIds = emptyList(),
+                    initQueryId = QueryId("current_state"),
+                    initParameters = emptyMap(),
+                    afterInitQueryIds = emptyList(),
+                    useColumns = setOf("id"),
+                    beforeUpdateQueryIds = emptyList(),
+                    updateQueryId = QueryId("updates"),
+                    updateParameters = emptyMap(),
+                    afterUpdateQueryIds = emptyList(),
+                    interval = interval,
                 ),
                 listener,
             )
@@ -265,14 +290,18 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
-                    false,
-                    ResetState(),
-                    null,
-                    mapOf("id" to listOf(startId.toString())),
-                    setOf("id"),
-                    QueryId("updates"),
-                    emptyMap(),
-                    interval,
+                    startFromLastReadRow = false,
+                    resetStateParameters = ResetState(),
+                    beforeInitQueryIds = emptyList(),
+                    initQueryId = null,
+                    initParameters = mapOf("id" to listOf(startId.toString())),
+                    afterInitQueryIds = emptyList(),
+                    useColumns = setOf("id"),
+                    beforeUpdateQueryIds = emptyList(),
+                    updateQueryId = QueryId("updates"),
+                    updateParameters = emptyMap(),
+                    afterUpdateQueryIds = emptyList(),
+                    interval = interval,
                 ),
                 listener,
             )
@@ -339,14 +368,18 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     dataSourceId,
-                    true,
-                    ResetState(),
-                    null,
-                    emptyMap(),
-                    setOf("id"),
-                    queryId,
-                    emptyMap(),
-                    interval,
+                    startFromLastReadRow = true,
+                    resetStateParameters = ResetState(),
+                    beforeInitQueryIds = emptyList(),
+                    initQueryId = null,
+                    initParameters = emptyMap(),
+                    afterInitQueryIds = emptyList(),
+                    useColumns = setOf("id"),
+                    beforeUpdateQueryIds = emptyList(),
+                    updateQueryId = queryId,
+                    updateParameters = emptyMap(),
+                    afterUpdateQueryIds = emptyList(),
+                    interval = interval,
                 ),
                 listener,
             )
@@ -417,16 +450,20 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
-                    false,
-                    ResetState(
+                    startFromLastReadRow = false,
+                    resetStateParameters = ResetState(
                         afterDate = resetDate
                     ),
-                    null,
-                    mapOf("id" to listOf(persons.size.toString())),
-                    setOf("id"),
-                    QueryId("updates"),
-                    emptyMap(),
-                    interval,
+                    beforeInitQueryIds = emptyList(),
+                    initQueryId = null,
+                    initParameters = mapOf("id" to listOf(persons.size.toString())),
+                    afterInitQueryIds = emptyList(),
+                    useColumns = setOf("id"),
+                    beforeUpdateQueryIds = emptyList(),
+                    updateQueryId = QueryId("updates"),
+                    updateParameters = emptyMap(),
+                    afterUpdateQueryIds = emptyList(),
+                    interval = interval,
                 ),
                 listener,
             )
@@ -498,16 +535,20 @@ internal class DataBaseReaderIntegrationTest {
             val taskId = reader.submitPullTask(
                 PullTableRequest(
                     DataSourceId("persons"),
-                    false,
-                    ResetState(
+                    startFromLastReadRow = false,
+                    resetStateParameters = ResetState(
                         afterTime = resetTime
                     ),
-                    null,
-                    mapOf("id" to listOf(persons.size.toString())),
-                    setOf("id"),
-                    QueryId("updates"),
-                    emptyMap(),
-                    interval,
+                    beforeInitQueryIds = emptyList(),
+                    initQueryId = null,
+                    initParameters = mapOf("id" to listOf(persons.size.toString())),
+                    afterInitQueryIds = emptyList(),
+                    useColumns = setOf("id"),
+                    beforeUpdateQueryIds = emptyList(),
+                    updateQueryId = QueryId("updates"),
+                    updateParameters = emptyMap(),
+                    afterUpdateQueryIds = emptyList(),
+                    interval = interval,
                 ),
                 listener,
             )

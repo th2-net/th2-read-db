@@ -132,15 +132,19 @@ internal class DataBaseReaderConfigurationTest {
                                     Instant.parse("2023-11-14T12:12:34.567890123Z"),
                                     LocalTime.parse("12:12:34.567890123")
                                 ),
+                                emptyList(),
                                 queryId,
                                 mapOf(
                                     "param1" to listOf("value1")
                                 ),
+                                emptyList(),
+                                emptyList(),
                                 queryId,
+                                mapOf(
+                                    "param1" to listOf("value1")
+                                ),
+                                emptyList(),
                                 setOf("a"),
-                                mapOf(
-                                    "param1" to listOf("value1")
-                                ),
                                 1000
                             )
                         )
@@ -257,15 +261,19 @@ internal class DataBaseReaderConfigurationTest {
                                 dataSource,
                                 true,
                                 ResetState(),
+                                emptyList(),
                                 null,
                                 mapOf(
                                     "param1" to listOf("value1")
                                 ),
+                                emptyList(),
+                                emptyList(),
                                 queryId,
-                                setOf("a"),
                                 mapOf(
                                     "param1" to listOf("value1")
                                 ),
+                                emptyList(),
+                                setOf("a"),
                                 1000
                             )
                         )

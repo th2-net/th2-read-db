@@ -65,9 +65,13 @@ dependencies {
     testImplementation platform("org.testcontainers:testcontainers-bom:1.19.0")
     testImplementation "org.testcontainers:testcontainers"
     testImplementation "org.testcontainers:mysql"
+    testImplementation "org.testcontainers:oracle-xe"
 
     testRuntimeOnly("com.mysql:mysql-connector-j:8.1.0") {
         because("mysql support")
+    }
+    testRuntimeOnly('com.oracle.database.jdbc:ojdbc11:23.2.0.0') {
+        because('oracle support')
     }
 }
 
