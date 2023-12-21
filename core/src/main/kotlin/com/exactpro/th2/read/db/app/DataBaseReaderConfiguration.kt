@@ -31,6 +31,7 @@ class DataBaseReaderConfiguration(
     val queries: Map<QueryId, QueryConfiguration>,
     val startupTasks: List<StartupTaskConfiguration> = emptyList(),
     val publication: PublicationConfiguration = PublicationConfiguration(),
+    val eventPublication: EventPublicationConfiguration = EventPublicationConfiguration(),
     val useTransport: Boolean = false
 )
 
@@ -38,6 +39,12 @@ class PublicationConfiguration(
     val queueSize: Int = 1000,
     val maxDelayMillis: Long = 1000,
     val maxBatchSize: Int = 100,
+)
+
+class EventPublicationConfiguration(
+    val maxBatchSizeInBytes: Long = 1_024 * 1_024,
+    val maxBatchSizeInItems: Int = 100,
+    val maxFlushTime: Long = 1000,
 )
 
 @JsonTypeInfo(

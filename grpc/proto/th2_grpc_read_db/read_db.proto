@@ -34,10 +34,12 @@ message QueryRequest {
   AssociatedMessageType associated_message_type = 4;
   repeated QueryId before_query_ids = 5;
   repeated QueryId after_query_ids = 6;
+//  maybe add parent event id parameter
 }
 
 message QueryResponse {
   map<string, string> row = 1;
+  int64 execution_id = 2;
 }
 
 message AssociatedMessageType {

@@ -18,6 +18,7 @@
 package com.exactpro.th2.read.db.bootstrap
 
 import com.exactpro.th2.common.grpc.Direction.FIRST
+import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.message.direction
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.message.sequence
@@ -33,7 +34,9 @@ import com.exactpro.th2.common.schema.message.QueueAttribute
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
+import com.exactpro.th2.common.utils.event.EventBatcher
 import com.exactpro.th2.common.utils.message.transport.toGroup
+import com.exactpro.th2.common.utils.shutdownGracefully
 import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
 import com.exactpro.th2.lwdataprovider.MessageSearcher
 import com.exactpro.th2.read.db.app.DataBaseReader
@@ -132,6 +135,7 @@ internal fun setupApp(
 
     val appScope = createScope(closeResource)
     val componentBookName = factory.boxConfiguration.bookName
+    val rootEventId = factory.rootEventId
     val messageLoader: MessageLoader = createMessageLoader(factory, componentBookName)
     val reader = if (cfg.useTransport) {
         val messageRouter: MessageRouter<GroupBatch> = factory.transportGroupBatchRouter
@@ -174,7 +178,13 @@ internal fun setupApp(
         createReader(cfg, appScope, messageQueue, closeResource, TableRow::toProtoMessage, messageLoader)
     }
 
-    val handler = DataBaseReaderGrpcServer(reader)
+    val eventBatcher = configureEventStoring(cfg, closeResource, factory.eventBatchRouter::send)
+
+    val handler = DataBaseReaderGrpcServer(
+        reader,
+        { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
+        { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
+    ) { eventBatcher.onEvent(it.toProto(rootEventId)) }
 
     val server = factory.grpcRouter.startServer(handler)
         .start()
@@ -271,6 +281,31 @@ private fun createScope(closeResource: (name: String, resource: () -> Unit) -> U
     return appScope
 }
 
+private fun configureEventStoring(
+    cfg: DataBaseReaderConfiguration,
+    closeResource: (name: String, resource: () -> Unit) -> Unit,
+    send: (EventBatch) -> Unit
+): EventBatcher {
+    val executor = Executors.newSingleThreadScheduledExecutor(
+        ThreadFactoryBuilder()
+            .setNameFormat("event-saver-%d")
+            .build()
+    )
+
+    closeResource("event storing") {
+        LOGGER.info { "Shutdown executor" }
+        executor.shutdownGracefully(1, TimeUnit.MINUTES)
+    }
+
+    return EventBatcher(
+        cfg.eventPublication.maxBatchSizeInBytes,
+        cfg.eventPublication.maxBatchSizeInItems,
+        cfg.eventPublication.maxFlushTime,
+        executor,
+        send
+    )
+}
+
 private fun <BUILDER, DIRECTION> configureTransportMessageStoring(
     cfg: DataBaseReaderConfiguration,
     keyExtractor: (BUILDER) -> SessionKey<DIRECTION>,
@@ -305,12 +340,7 @@ private fun <BUILDER, DIRECTION> configureTransportMessageStoring(
                 LOGGER.error(ex) { "cannot complete drain task in specified timeout" }
             }
             LOGGER.info { "Shutdown executor" }
-            executor.shutdown()
-            if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
-                LOGGER.error { "executor was not shutdown during specified timeout. Force shutdown" }
-                val runnables = executor.shutdownNow()
-                LOGGER.error { "${runnables.size} task(s) left" }
-            }
+            executor.shutdownGracefully(1, TimeUnit.MINUTES)
         }
     }
     return messagesQueue

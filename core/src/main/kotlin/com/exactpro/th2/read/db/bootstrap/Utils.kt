@@ -38,6 +38,7 @@ import java.math.BigDecimal
 import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
 internal const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
+private const val TH2_READ_DB_UNIQUE_ID = "th2.read-db.execute.uid"
 private const val SEPARATOR = ','
 
 internal fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<String, String>): ProtoRawMessage.Builder {
@@ -65,9 +66,16 @@ internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties:
     if (associatedMessageType != null) {
         builder.addMetadataProperty(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, associatedMessageType)
     }
+    if (executionId != null) {
+        builder.addMetadataProperty(TH2_READ_DB_UNIQUE_ID, executionId.toString())
+    }
     properties.forEach(builder::addMetadataProperty)
 
     return builder
+}
+
+internal fun TableRow.toMap(): Map<String, String?> {
+    return columns.mapValues { it.value?.toStringValue() }
 }
 
 internal fun TableRow.toCsvBody(): ByteArray {

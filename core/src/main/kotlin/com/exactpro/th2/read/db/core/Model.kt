@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,11 @@ data class QueryId(val id: String)
 
 data class TaskId(val id: String)
 
-data class TableRow(val columns: Map<String, Any?>, val associatedMessageType: String? = null)
+data class TableRow(
+    val columns: Map<String, Any?>,
+    val associatedMessageType: String? = null,
+    val executionId: Long? = null
+)
 
 private class DataSourceIdDeserializer : FromStringDeserializer<DataSourceId>(DataSourceId::class.java) {
     override fun _deserialize(value: String, ctxt: DeserializationContext?): DataSourceId = DataSourceId(value)
