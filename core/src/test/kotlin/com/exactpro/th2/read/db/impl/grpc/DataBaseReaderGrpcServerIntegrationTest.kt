@@ -44,12 +44,9 @@ import io.grpc.ManagedChannel
 import io.grpc.Server
 import io.grpc.inprocess.InProcessChannelBuilder
 import io.grpc.inprocess.InProcessServerBuilder
-import io.grpc.stub.StreamObserver
 import io.netty.buffer.ByteBufUtil.decodeHexDump
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -60,6 +57,7 @@ import org.junit.jupiter.api.TestInstance
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.timeout
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -80,7 +78,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertNotNull
 
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DataBaseReaderGrpcServerIntegrationTest {
@@ -141,19 +138,18 @@ class DataBaseReaderGrpcServerIntegrationTest {
         val genericRowListener = mock<RowListener> { }
         val messageLoader = mock<MessageLoader> { }
         val onEvent = mock<OnEvent> { }
-        val streamObserver = mock<StreamObserver<QueryResponse>> { }
 
         val sourceId = "persons"
         val queryId = "select"
         val cfg = DataBaseReaderConfiguration(
-            mapOf(
+            dataSources = mapOf(
                 DataSourceId(sourceId) to DataSourceConfiguration(
                     mysql.jdbcUrl,
                     mysql.username,
                     mysql.password,
                 )
             ),
-            mapOf(
+            queries = mapOf(
                 QueryId(queryId) to QueryConfiguration(
                     "SELECT * FROM test_data.person WHERE \${fromId:integer} < id AND id < \${toId:integer}",
                     mapOf(
@@ -171,7 +167,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
                 .putValues("toId", "20")
         }.build()
 
-        runTest {
+        runBlocking(Dispatchers.IO) {
             val reader = DataBaseReader.createDataBaseReader(
                 cfg,
                 this,
@@ -187,12 +183,10 @@ class DataBaseReaderGrpcServerIntegrationTest {
                 { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
                 onEvent,
             )
-            runCurrent()
 
-            GrpcTestHolder(service).use { (stub) ->
+            val responses: List<QueryResponse> = GrpcTestHolder(service).use { (stub) ->
                 withCancellation {
-                    stub.execute(request, streamObserver)
-                    advanceUntilIdle()
+                    stub.execute(request).asSequence().toList()
                 }
             }
 
@@ -203,8 +197,8 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
             val executionIds = hashSetOf<Long>()
             genericRowListener.assertCaptured(expectedData).also(executionIds::add)
-            streamObserver.assertCaptured(expectedData).also(executionIds::add)
-            onEvent.assertCaptured(cfg, request).also(executionIds::add)
+            responses.assert(expectedData).also(executionIds::add)
+            onEvent.assertCaptured(cfg, request, 1_000).also(executionIds::add)
             assertEquals(1, executionIds.size, "execution ids mismatch $executionIds")
         }
     }
@@ -231,22 +225,17 @@ class DataBaseReaderGrpcServerIntegrationTest {
         return assertNotNull(executionIds.single())
     }
 
-    private fun StreamObserver<QueryResponse>.assertCaptured(persons: List<Person>): Long {
-        val captor = argumentCaptor<QueryResponse> { }
-        verify(this, times(persons.size)).onNext(captor.capture())
-        verify(this).onCompleted()
-        verifyNoMoreInteractions(this)
-
-        captor.allValues.map {
+    private fun List<QueryResponse>.assert(persons: List<Person>): Long {
+        map { response ->
             Person(
-                it.getRowOrThrow("name").toString(),
-                LocalDate.parse(it.getRowOrThrow("birthday")).atStartOfDay().toInstant(ZoneOffset.UTC),
-                decodeHexDump(it.getRowOrThrow("data")),
+                response.getRowOrThrow("name").toString(),
+                LocalDate.parse(response.getRowOrThrow("birthday")).atStartOfDay().toInstant(ZoneOffset.UTC),
+                decodeHexDump(response.getRowOrThrow("data")),
             )
         }.also {
             expectThat(it).containsExactly(persons)
         }
-        val executionIds = captor.allValues.asSequence()
+        val executionIds = asSequence()
             .map(QueryResponse::getExecutionId)
             .toSet()
         assertEquals(1, executionIds.size)
@@ -254,9 +243,9 @@ class DataBaseReaderGrpcServerIntegrationTest {
         return executionIds.single()
     }
 
-    private fun OnEvent.assertCaptured(cfg: DataBaseReaderConfiguration, request: QueryRequest): Long {
+    private fun OnEvent.assertCaptured(cfg: DataBaseReaderConfiguration, request: QueryRequest, timeout: Long): Long {
         val captor = argumentCaptor<Event> { }
-        verify(this).accept(captor.capture())
+        verify(this, timeout(timeout)).accept(captor.capture())
 
         return captor.firstValue.let { event ->
             expectThat(event) {
@@ -336,7 +325,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
         private val inProcessChannel: ManagedChannel
 
-        val stub: ReadDbGrpc.ReadDbStub
+        val stub: ReadDbGrpc.ReadDbBlockingStub
 
         init {
             inProcessServer = InProcessServerBuilder
@@ -351,10 +340,10 @@ class DataBaseReaderGrpcServerIntegrationTest {
                 .directExecutor()
                 .build()
 
-            stub = ReadDbGrpc.newStub(inProcessChannel)
+            stub = ReadDbGrpc.newBlockingStub(inProcessChannel)
         }
 
-        operator fun component1(): ReadDbGrpc.ReadDbStub = stub
+        operator fun component1(): ReadDbGrpc.ReadDbBlockingStub = stub
 
         override fun close() {
             LOGGER.info { "Shutdown process channel" }
