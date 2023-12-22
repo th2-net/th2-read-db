@@ -184,7 +184,7 @@ metadata:
   name: read-db
 spec:
   image-name: ghcr.io/th2-net/th2-read-db
-  image-version: 0.0.1
+  image-version: 0.7.0-dev
   type: th2-read
   custom-config:
     dataSources:
@@ -261,7 +261,7 @@ metadata:
   name: read-db
 spec:
   imageName: ghcr.io/th2-net/th2-read-db
-  imageVersion: 0.0.1
+  imageVersion: 0.7.0-dev
   type: th2-read
   customConfig:
     dataSources:
@@ -335,6 +335,9 @@ spec:
         memory: 100Mi
         cpu: 50m
 ```
+
+### Oracle redo logs
+[How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
 
