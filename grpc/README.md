@@ -10,6 +10,7 @@ You can:
 
 ## 0.0.7
 + added execution_id to the QueryResponse
++ added parent_event_id to the QueryRequest
 
 ## 0.0.6
 + added before_init_query_ids, after_init_query_ids, before_update_query_ids, after_update_query_ids to the DbPullRequest

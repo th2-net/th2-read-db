@@ -169,7 +169,6 @@ spec:
       maxDelayMillis: 1000
       maxBatchSize: 100
     eventPublication:
-      maxBatchSizeInBytes: 1048576
       maxBatchSizeInItems: 100
       maxFlushTime: 1000
     useTransport: true

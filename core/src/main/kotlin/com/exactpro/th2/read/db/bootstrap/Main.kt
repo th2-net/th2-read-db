@@ -136,6 +136,8 @@ internal fun setupApp(
     val appScope = createScope(closeResource)
     val componentBookName = factory.boxConfiguration.bookName
     val rootEventId = factory.rootEventId
+    val maxEventBatchSize = factory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
+
     val messageLoader: MessageLoader = createMessageLoader(factory, componentBookName)
     val reader = if (cfg.useTransport) {
         val messageRouter: MessageRouter<GroupBatch> = factory.transportGroupBatchRouter
@@ -178,13 +180,15 @@ internal fun setupApp(
         createReader(cfg, appScope, messageQueue, closeResource, TableRow::toProtoMessage, messageLoader)
     }
 
-    val eventBatcher = configureEventStoring(cfg, closeResource, factory.eventBatchRouter::send)
+    val eventBatcher = configureEventStoring(cfg, maxEventBatchSize, closeResource, factory.eventBatchRouter::send)
 
     val handler = DataBaseReaderGrpcServer(
         reader,
+        rootEventId,
         { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
         { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
-    ) { eventBatcher.onEvent(it.toProto(rootEventId)) }
+        eventBatcher::onEvent
+    )
 
     val server = factory.grpcRouter.startServer(handler)
         .start()
@@ -283,6 +287,7 @@ private fun createScope(closeResource: (name: String, resource: () -> Unit) -> U
 
 private fun configureEventStoring(
     cfg: DataBaseReaderConfiguration,
+    maxEventBatchSize: Int,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
     send: (EventBatch) -> Unit
 ): EventBatcher {
@@ -298,7 +303,7 @@ private fun configureEventStoring(
     }
 
     return EventBatcher(
-        cfg.eventPublication.maxBatchSizeInBytes,
+        maxEventBatchSize.toLong(),
         cfg.eventPublication.maxBatchSizeInItems,
         cfg.eventPublication.maxFlushTime,
         executor,

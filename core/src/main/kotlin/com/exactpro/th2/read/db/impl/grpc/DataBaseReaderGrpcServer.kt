@@ -17,6 +17,7 @@
 package com.exactpro.th2.read.db.impl.grpc
 
 import com.exactpro.th2.common.event.Event
+import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.message.toJavaDuration
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.read.db.app.DataBaseReader
@@ -45,10 +46,12 @@ import mu.KotlinLogging
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import com.exactpro.th2.common.grpc.Event as ProtoEvent
 import com.exactpro.th2.read.db.grpc.QueryId as ProtoQueryId
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
+    private val rootEventId: EventID,
     private val getSourceCfg: (DataSourceId) -> DataSourceConfiguration,
     private val getQueryCfg: (QueryId) -> QueryConfiguration,
     private val onEvent: OnEvent,
@@ -59,6 +62,7 @@ class DataBaseReaderGrpcServer(
         val event = Event.start()
             .name("Execute '${request.queryId.id}' query ($executionId)")
             .type("read-db.execute")
+        val parentEventId = if (request.hasParentEventId()) request.parentEventId else rootEventId
         try {
             val associatedMessageType: String? = if (request.hasAssociatedMessageType()) request.associatedMessageType.name else null
             val executeQueryRequest = request.run {
@@ -71,13 +75,15 @@ class DataBaseReaderGrpcServer(
                 )
             }
             event.bodyData(executeQueryRequest.toBody(executionId))
-            app.executeQuery(executeQueryRequest, GrpcResultListener(responseObserver, event)) { row ->
+            app.executeQuery(executeQueryRequest, GrpcResultListener(responseObserver, event, parentEventId)) { row ->
                 row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
             }
         } catch (ex: Exception) {
             LOGGER.error(ex) { "cannot execute request ${request.toJson()}" }
             responseObserver.onError(Status.INTERNAL.withDescription(ex.message).asRuntimeException())
-            event.exception(ex, true).also(onEvent::accept)
+            event.exception(ex, true)
+                .toProto(parentEventId)
+                .also(onEvent::accept)
         }
     }
 
@@ -137,6 +143,7 @@ class DataBaseReaderGrpcServer(
     inner class GrpcResultListener(
         private val observer: StreamObserver<QueryResponse>,
         private val event: Event,
+        private val parentEventId: EventID,
     ) : ResultListener {
         override fun onRow(sourceId: DataSourceId, row: TableRow) {
             requireNotNull(row.executionId) {
@@ -154,22 +161,25 @@ class DataBaseReaderGrpcServer(
             observer.onError(error)
             event.endTimestamp()
                 .exception(error, true)
+                .toProto(parentEventId)
                 .also(onEvent::accept)
         }
 
         override fun onComplete() {
             observer.onCompleted()
-            event.endTimestamp().also(onEvent::accept)
+            event.endTimestamp()
+                .toProto(parentEventId)
+                .also(onEvent::accept)
         }
     }
 
     private fun ExecuteQueryRequest.toBody(executionId: Long) = ExecuteBodyData(
+        executionId,
         getSourceCfg(sourceId),
         before.map(getQueryCfg),
         getQueryCfg(queryId),
         after.map(getQueryCfg),
-        parameters,
-        executionId
+        parameters
     )
 
     private object DummyUpdateListener : UpdateListener {
@@ -190,5 +200,5 @@ class DataBaseReaderGrpcServer(
 }
 
 fun interface OnEvent {
-    fun accept(event: Event)
+    fun accept(event: ProtoEvent)
 }

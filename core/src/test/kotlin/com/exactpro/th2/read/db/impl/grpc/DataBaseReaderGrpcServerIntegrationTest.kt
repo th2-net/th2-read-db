@@ -16,8 +16,10 @@
 
 package com.exactpro.th2.read.db.impl.grpc
 
-import com.exactpro.th2.common.event.Event
+import com.exactpro.th2.common.grpc.Event
+import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.EventStatus
+import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.app.DataBaseReader
@@ -66,6 +68,7 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
+import strikt.assertions.isSameInstanceAs
 import java.io.ByteArrayInputStream
 import java.sql.Connection
 import java.sql.Date
@@ -81,6 +84,12 @@ import kotlin.test.assertNotNull
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DataBaseReaderGrpcServerIntegrationTest {
+    private val rootEventId = EventID.newBuilder().apply {
+        bookName = "test-book"
+        scope = "test-scope"
+        id = "test-id"
+        startTimestamp = Instant.now().toTimestamp()
+    }.build()
     private val mysql = MySqlContainer()
     private val persons = (1..30).map {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
@@ -173,6 +182,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
             val service = DataBaseReaderGrpcServer(
                 reader,
+                rootEventId,
                 { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
                 { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
                 onEvent,
@@ -248,11 +258,12 @@ class DataBaseReaderGrpcServerIntegrationTest {
         val captor = argumentCaptor<Event> { }
         verify(this).accept(captor.capture())
 
-        return captor.firstValue.toProto("test-book").let { event ->
+        return captor.firstValue.let { event ->
             expectThat(event) {
                 get { name }.contains(Regex("Execute '${request.queryId.id}' query \\(.*\\)"))
                 get { type }.isEqualTo("read-db.execute")
                 get { status }.isEqualTo(EventStatus.SUCCESS)
+                get { parentId }.isSameInstanceAs(rootEventId)
                 get { body.parseSingle<ExecuteBodyData>() }.apply {
                     get { dataSource }.isEqualTo(cfg.dataSources[request.sourceId.toModel()]?.copy(password = null))
                     get { beforeQueries }.isEqualTo(request.beforeQueryIdsList.map { requireNotNull(cfg.queries[it.toModel()]) })

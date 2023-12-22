@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package th2.read_db;
 
+import "th2_grpc_common/common.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
@@ -34,7 +35,7 @@ message QueryRequest {
   AssociatedMessageType associated_message_type = 4;
   repeated QueryId before_query_ids = 5;
   repeated QueryId after_query_ids = 6;
-//  maybe add parent event id parameter
+  EventID parent_event_id = 7;
 }
 
 message QueryResponse {

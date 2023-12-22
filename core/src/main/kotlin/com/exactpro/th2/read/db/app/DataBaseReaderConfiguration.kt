@@ -42,7 +42,6 @@ class PublicationConfiguration(
 )
 
 class EventPublicationConfiguration(
-    val maxBatchSizeInBytes: Long = 1_024 * 1_024,
     val maxBatchSizeInItems: Int = 100,
     val maxFlushTime: Long = 1000,
 )

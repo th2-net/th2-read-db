@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonInclude
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class ExecuteBodyData(
+    val executionId: Long,
     val dataSource: DataSourceConfiguration,
     val beforeQueries: List<QueryConfiguration> = emptyList(),
     val query: QueryConfiguration,
     val afterQueries: List<QueryConfiguration> = emptyList(),
     val parameters: QueryParametersValues = emptyMap(),
-    val executionId: Long,
 ) : IBodyData

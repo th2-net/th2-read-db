@@ -27,6 +27,7 @@ class ExecuteBodyDataTest {
     @Test
     fun `serializes body data - fulfilled`() {
         val bean = ExecuteBodyData(
+            123,
             DataSourceConfiguration(
                 "jdbc:mysql://localhost:1234/test_data",
                 "test-username",
@@ -50,14 +51,14 @@ class ExecuteBodyDataTest {
                     mapOf("test-after-parameter" to listOf("test-after-parameter-value"))
                 )
             ),
-            mapOf("test-user-parameter" to listOf("test-user-parameter-value")),
-            123
+            mapOf("test-user-parameter" to listOf("test-user-parameter-value"))
         )
 
         val actual = MAPPER.writeValueAsString(bean)
         assertEquals(
             """
             |{
+              |"executionId":123,
               |"dataSource":{
                 |"url":"jdbc:mysql://localhost:1234/test_data",
                 |"username":"test-username",
@@ -98,8 +99,7 @@ class ExecuteBodyDataTest {
                 |"test-user-parameter":[
                   |"test-user-parameter-value"
                 |]
-              |},
-              |"executionId":123
+              |}
             |}
         """.trimMargin().replace(Regex("\n"), ""), actual
         )
@@ -108,6 +108,7 @@ class ExecuteBodyDataTest {
     @Test
     fun `serializes body data - low-filled`() {
         val bean = ExecuteBodyData(
+            123,
             DataSourceConfiguration(
                 "jdbc:mysql://localhost:1234/test_data",
                 "test-username",
@@ -118,22 +119,21 @@ class ExecuteBodyDataTest {
                 "test-query",
             ),
             emptyList(),
-            emptyMap(),
-            123
+            emptyMap()
         )
 
         val actual = MAPPER.writeValueAsString(bean)
         assertEquals(
             """
             |{
+              |"executionId":123,
               |"dataSource":{
                 |"url":"jdbc:mysql://localhost:1234/test_data",
                 |"username":"test-username"
               |},
               |"query":{
                 |"query":"test-query"
-              |},
-              |"executionId":123
+              |}
             |}
         """.trimMargin().replace(Regex("\n"), ""), actual
         )
