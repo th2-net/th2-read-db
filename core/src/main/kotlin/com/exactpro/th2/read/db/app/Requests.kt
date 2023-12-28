@@ -19,14 +19,16 @@ package com.exactpro.th2.read.db.app
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
+import com.fasterxml.jackson.annotation.JsonInclude
 import java.time.Duration
 
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 class ExecuteQueryRequest(
     val sourceId: DataSourceId,
-    val before: List<QueryId>,
+    val before: List<QueryId> = emptyList(),
     val queryId: QueryId,
-    val after: List<QueryId>,
-    val parameters: QueryParametersValues,
+    val after: List<QueryId> = emptyList(),
+    val parameters: QueryParametersValues = emptyMap(),
 )
 
 class PullTableRequest(

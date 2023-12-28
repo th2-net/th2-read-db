@@ -17,9 +17,9 @@
 package com.exactpro.th2.read.db.impl.grpc
 
 import com.exactpro.th2.common.event.IBodyData
+import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.QueryConfiguration
-import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.fasterxml.jackson.annotation.JsonInclude
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -29,5 +29,5 @@ data class ExecuteBodyData(
     val beforeQueries: List<QueryConfiguration> = emptyList(),
     val query: QueryConfiguration,
     val afterQueries: List<QueryConfiguration> = emptyList(),
-    val parameters: QueryParametersValues = emptyMap(),
+    val request: ExecuteQueryRequest,
 ) : IBodyData

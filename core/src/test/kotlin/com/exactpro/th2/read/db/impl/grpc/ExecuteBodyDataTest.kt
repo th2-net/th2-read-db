@@ -17,8 +17,11 @@
 package com.exactpro.th2.read.db.impl.grpc
 
 import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
+import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
+import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryConfiguration
+import com.exactpro.th2.read.db.core.QueryId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -51,7 +54,13 @@ class ExecuteBodyDataTest {
                     mapOf("test-after-parameter" to listOf("test-after-parameter-value"))
                 )
             ),
-            mapOf("test-user-parameter" to listOf("test-user-parameter-value"))
+            ExecuteQueryRequest(
+                DataSourceId("test-data-source-id"),
+                listOf(QueryId("test-before-query-id")),
+                QueryId("test-query-id"),
+                listOf(QueryId("test-after-query-id")),
+                mapOf("test-user-parameter" to listOf("test-user-parameter-value"))
+            )
         )
 
         val actual = MAPPER.writeValueAsString(bean)
@@ -95,10 +104,20 @@ class ExecuteBodyDataTest {
                   |}
                 |}
               |],
-              |"parameters":{
-                |"test-user-parameter":[
-                  |"test-user-parameter-value"
-                |]
+              |"request":{
+                |"sourceId":"test-data-source-id",
+                |"before":[
+                  |"test-before-query-id"
+                |],
+                |"queryId":"test-query-id",
+                |"after":[
+                    |"test-after-query-id"
+                |],
+                |"parameters":{
+                  |"test-user-parameter":[
+                    |"test-user-parameter-value"
+                  |]
+                |}
               |}
             |}
         """.trimMargin().replace(Regex("\n"), ""), actual
@@ -119,7 +138,13 @@ class ExecuteBodyDataTest {
                 "test-query",
             ),
             emptyList(),
-            emptyMap()
+            ExecuteQueryRequest(
+                DataSourceId("test-data-source-id"),
+                emptyList(),
+                QueryId("test-query-id"),
+                emptyList(),
+                emptyMap()
+            )
         )
 
         val actual = MAPPER.writeValueAsString(bean)
@@ -133,6 +158,10 @@ class ExecuteBodyDataTest {
               |},
               |"query":{
                 |"query":"test-query"
+              |},
+              |"request":{
+                |"sourceId":"test-data-source-id",
+                |"queryId":"test-query-id"
               |}
             |}
         """.trimMargin().replace(Regex("\n"), ""), actual

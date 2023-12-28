@@ -179,7 +179,7 @@ class DataBaseReaderGrpcServer(
         before.map(getQueryCfg),
         getQueryCfg(queryId),
         after.map(getQueryCfg),
-        parameters
+        this
     )
 
     private object DummyUpdateListener : UpdateListener {
