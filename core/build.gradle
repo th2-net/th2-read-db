@@ -59,6 +59,8 @@ dependencies {
     testImplementation "org.testcontainers:testcontainers"
     testImplementation "org.testcontainers:mysql"
 
+    testImplementation 'com.exactpro.th2:junit-jupiter-integration:0.0.1-master-6956603819-5241ee5-SNAPSHOT'
+
     testRuntimeOnly("com.mysql:mysql-connector-j:8.1.0") {
         because("mysql support")
     }

@@ -88,6 +88,7 @@ class DataBaseServiceImpl(
             reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
             LOGGER.trace { "Closing connection to $dataSourceId" }
             runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
+            LOGGER.info { "Query $queryId for $dataSourceId connection was executed" }
         }
     }
 
