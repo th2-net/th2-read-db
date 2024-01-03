@@ -84,16 +84,21 @@ class DataBaseReader(
     ) {
         scope.launch {
             with(request) {
-                dataBaseService.executeQuery(sourceId, queryId, parameters)
-                    .onCompletion {
-                        if (it == null) {
-                            listener.onComplete()
-                        } else {
-                            listener.onError(it)
+                try {
+                    dataBaseService.executeQuery(sourceId, queryId, parameters)
+                        .onCompletion {
+                            if (it == null) {
+                                listener.onComplete()
+                            } else {
+                                listener.onError(it)
+                            }
+                        }.collect {
+                            rowTransformer(it).transferTo(sourceId, listener, rowListener)
                         }
-                    }.collect {
-                        rowTransformer(it).transferTo(sourceId, listener, rowListener)
-                    }
+                } catch (ex: Exception) {
+                    LOGGER.error(ex) { "cannot execute query '${request.queryId}' for '${request.sourceId}'" }
+                    listener.onError(ex)
+                }
             }
         }
     }
