@@ -88,8 +88,21 @@ PL/SQL procedure successfully completed.
 
 ### Select SQL statement
 
+Kindly note that there is a limit in 4000 character per SQL_REDO column.
+If the SQL_REDO value to insert exceeds this limit it will be split into several records
+with same SCN, RS_ID and SSN columns.
+You can read more information by the [following link](https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/V-LOGMNR_CONTENTS.html).
+Also, `0x00` (null) character are replaces with ` ` (space) to avoid issues with XMLAGG function.
+
 ```roomsql
-SELECT SCN, TIMESTAMP, OPERATION, TABLE_NAME, ROW_ID, SQL_REDO FROM V$LOGMNR_CONTENTS;
+SELECT SCN, RS_ID, SSN,
+MAX(TIMESTAMP) AS TIMESTAMP, 
+MAX(TABLE_NAME) AS TABLE_NAME, 
+MAX(ROW_ID) AS ROW_ID, 
+MAX(OPERATION) AS OPERATION, 
+XMLAGG(XMLPARSE(CONTENT REPLACE(SQL_REDO, CHR(0), ' ')) ORDER BY SCN, RS_ID, SSN, ROWNUM).GETCLOBVAL() AS SQL_REDO
+FROM V$LOGMNR_CONTENTS
+GROUP BY SCN, RS_ID, SSN;
 ```
 ```roomsql
 SCN     TIMESTAMP            OPERATION TABLE_NAME ROW_ID             SQL_REDO
@@ -142,10 +155,16 @@ spec:
         query: "{CALL DBMS_LOGMNR.END_LOGMNR}"
       update-logmnr-contents:
         query: >
-          SELECT SCN, TIMESTAMP, TABLE_NAME, ROW_ID, OPERATION, SQL_REDO 
-          FROM V$LOGMNR_CONTENTS 
-          WHERE AND SCN > ${SCN:integer} 
+          SELECT SCN, RS_ID, SSN,
+          MAX(TIMESTAMP) AS TIMESTAMP,
+          MAX(TABLE_NAME) AS TABLE_NAME,
+          MAX(ROW_ID) AS ROW_ID,
+          MAX(OPERATION) AS OPERATION,
+          XMLAGG(XMLPARSE(CONTENT REPLACE(SQL_REDO, CHR(0), ' ')) ORDER BY SCN, RS_ID, SSN, ROWNUM).GETCLOBVAL() AS SQL_REDO
+          FROM V$LOGMNR_CONTENTS
+          WHERE TABLE_NAME = 'YOUR_TABLE' AND SCN > ${SCN:integer} 
           AND OPERATION in ('INSERT', 'DELETE', 'UPDATE')
+          GROUP BY SCN, RS_ID, SSN
     startupTasks:
       - type: pull
         dataSource: db
