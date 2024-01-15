@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.exactpro.th2.read.db.impl.grpc
 
-import com.exactpro.th2.common.grpc.Event
+import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.EventStatus
 import com.exactpro.th2.common.message.toTimestamp
@@ -56,6 +56,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.times
@@ -178,7 +179,6 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
             val service = DataBaseReaderGrpcServer(
                 reader,
-                rootEventId,
                 { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
                 { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
                 onEvent,
@@ -245,15 +245,15 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
     private fun OnEvent.assertCaptured(cfg: DataBaseReaderConfiguration, request: QueryRequest, timeout: Long): Long {
         val captor = argumentCaptor<Event> { }
-        verify(this, timeout(timeout)).accept(captor.capture())
+        verify(this, timeout(timeout)).accept(captor.capture(), isNull())
 
-        return captor.firstValue.let { event ->
+        return captor.firstValue.toProto(rootEventId).let { event ->
             expectThat(event) {
                 get { name }.contains(Regex("Execute '${request.queryId.id}' query \\(.*\\)"))
                 get { type }.isEqualTo("read-db.execute")
                 get { status }.isEqualTo(EventStatus.SUCCESS)
                 get { parentId }.isSameInstanceAs(rootEventId)
-                get { body.parseSingle<ExecuteBodyData>() }.apply {
+                get { body.parseSingle<ExecuteBodyData>() }.and {
                     get { dataSource }.isEqualTo(cfg.dataSources[request.sourceId.toModel()]?.copy(password = null))
                     get { beforeQueries }.isEqualTo(request.beforeQueryIdsList.map { requireNotNull(cfg.queries[it.toModel()]) })
                     get { query }.isEqualTo(cfg.queries[request.queryId.toModel()])
@@ -321,27 +321,19 @@ class DataBaseReaderGrpcServerIntegrationTest {
     private class GrpcTestHolder(
         service: BindableService
     ) : AutoCloseable {
-        private val inProcessServer: Server
+        private val inProcessServer: Server = InProcessServerBuilder
+            .forName(SERVER_NAME)
+            .addService(service)
+            .directExecutor()
+            .build()
+            .also(Server::start)
 
-        private val inProcessChannel: ManagedChannel
+        private val inProcessChannel: ManagedChannel = InProcessChannelBuilder
+            .forName(SERVER_NAME)
+            .directExecutor()
+            .build()
 
-        val stub: ReadDbGrpc.ReadDbBlockingStub
-
-        init {
-            inProcessServer = InProcessServerBuilder
-                .forName(SERVER_NAME)
-                .addService(service)
-                .directExecutor()
-                .build()
-                .also(Server::start)
-
-            inProcessChannel = InProcessChannelBuilder
-                .forName(SERVER_NAME)
-                .directExecutor()
-                .build()
-
-            stub = ReadDbGrpc.newBlockingStub(inProcessChannel)
-        }
+        val stub: ReadDbGrpc.ReadDbBlockingStub = ReadDbGrpc.newBlockingStub(inProcessChannel)
 
         operator fun component1(): ReadDbGrpc.ReadDbBlockingStub = stub
 

@@ -184,11 +184,13 @@ internal fun setupApp(
 
     val handler = DataBaseReaderGrpcServer(
         reader,
-        rootEventId,
         { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
         { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
-        eventBatcher::onEvent
-    )
+    ) { event, parentEventId ->
+        eventBatcher.onEvent(
+            event.toProto(parentEventId ?: rootEventId)
+        )
+    }
 
     val server = factory.grpcRouter.startServer(handler)
         .start()
