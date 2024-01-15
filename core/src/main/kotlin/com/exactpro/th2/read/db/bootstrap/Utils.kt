@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,10 +74,6 @@ internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties:
     return builder
 }
 
-internal fun TableRow.toMap(): Map<String, String?> {
-    return columns.mapValues { it.value?.toStringValue() }
-}
-
 internal fun TableRow.toCsvBody(): ByteArray {
     return ByteArrayOutputStream().use {
         CSVWriterBuilder(it.writer())
@@ -132,7 +128,7 @@ internal fun MessageSearchResponse.toTableRow(): TableRow {
     }
 }
 
-private fun Any.toStringValue(): String = when (this) {
+internal fun Any.toStringValue(): String = when (this) {
     is BigDecimal -> stripTrailingZeros().toPlainString()
     is Double -> toBigDecimal().toStringValue()
     is Float -> toBigDecimal().toStringValue()

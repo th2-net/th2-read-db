@@ -23,7 +23,7 @@ import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.app.PullTableRequest
-import com.exactpro.th2.read.db.bootstrap.toMap
+import com.exactpro.th2.read.db.bootstrap.toStringValue
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.QueryConfiguration
@@ -152,7 +152,7 @@ class DataBaseReaderGrpcServer(
             }
             observer.onNext(
                 QueryResponse.newBuilder()
-                    .putAllRow(row.toMap())
+                    .putRows(row)
                     .setExecutionId(row.executionId)
                     .build()
             )
@@ -195,6 +195,15 @@ class DataBaseReaderGrpcServer(
         private val EXECUTION_COUNTER = AtomicLong(
             Instant.now().run { epochSecond * TimeUnit.SECONDS.toNanos(1) + nano }
         )
+
+        private fun QueryResponse.Builder.putRows(tableRow: TableRow) = apply {
+            tableRow.columns.forEach { (key, value) ->
+                // null values should be skipped because they aren't supported by Protobuf
+                if (value != null) {
+                    putRow(key, value.toStringValue())
+                }
+            }
+        }
     }
 }
 

@@ -68,6 +68,7 @@ The list of queries that can be executed by read-db.
   It might contain parameters in the following format: `${<name>[:<type>]}`.
   The **type** part can be omitted if the type is `varchar`.
   Examples: `${id:integer}`, `${registration_time:timestamp}`, `${first_name}`
+  [Types](https://docs.oracle.com/javase/8/docs/api/java/sql/JDBCType.html): bit, tinyint, smallint, integer, bigint, float, real, double, numeric, decimal, char, varchar, longvarchar, date, time, timestamp, binary, varbinary, longvarbinary, null, other, java_object, distinct, struct, array, blob, clob, ref, datalink, boolean, rowid, nchar, nvarchar, longnvarchar, nclob, sqlxml, ref_cursor, time_with_timezone, timestamp_with_timezone
 + defaultParameters - the default values for parameters. They will be used if the parameter was not specified in the request
 + messageType - the message type that should be associated with this query.
   If it is set the read-db will set a property `th2.csv.override_message_type` with specified value
@@ -343,6 +344,10 @@ spec:
 #### Feature:
 
 + gRPC execute method generates unique id for each execution and puts it into related event and messages.
+
+#### Fix:
+
++ gRPC Execute method doesn't respond rows with null values. gRPC server implementation skips columns with null value after fix.
 
 ### 0.6.0
 

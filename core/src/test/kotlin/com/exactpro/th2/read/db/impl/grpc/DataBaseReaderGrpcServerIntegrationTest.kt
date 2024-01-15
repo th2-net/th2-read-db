@@ -93,7 +93,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
     }
 
-    private data class Person(val name: String, val birthday: Instant, val data: ByteArray) {
+    private data class Person(val name: String, val birthday: Instant, val data: ByteArray?) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -102,7 +102,10 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
             if (name != other.name) return false
             if (birthday != other.birthday) return false
-            if (!data.contentEquals(other.data)) return false
+            if (data != null) {
+                if (other.data == null) return false
+                if (!data.contentEquals(other.data)) return false
+            } else if (other.data != null) return false
 
             return true
         }
@@ -110,7 +113,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         override fun hashCode(): Int {
             var result = name.hashCode()
             result = 31 * result + birthday.hashCode()
-            result = 31 * result + data.contentHashCode()
+            result = 31 * result + (data?.contentHashCode() ?: 0)
             return result
         }
     }
@@ -134,7 +137,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
     }
 
     @Test
-    fun `test execute gRPC request`() {
+    fun `execute gRPC request test`() {
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> { }
         val messageLoader = mock<MessageLoader> { }
@@ -203,6 +206,79 @@ class DataBaseReaderGrpcServerIntegrationTest {
         }
     }
 
+    @Test
+    fun `null value in response test`() {
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
+        val onEvent = mock<OnEvent> { }
+
+        val person = Person("null-test", Instant.now().truncatedTo(ChronoUnit.DAYS), null)
+        execute {
+            insertData(listOf(person))
+        }
+
+        val sourceId = "persons"
+        val queryId = "select"
+        val cfg = DataBaseReaderConfiguration(
+            dataSources = mapOf(
+                DataSourceId(sourceId) to DataSourceConfiguration(
+                    mysql.jdbcUrl,
+                    mysql.username,
+                    mysql.password,
+                )
+            ),
+            queries = mapOf(
+                QueryId(queryId) to QueryConfiguration(
+                    "SELECT * FROM test_data.person WHERE name = \${name}",
+                    mapOf(
+                        "name" to listOf(person.name),
+                    )
+                ),
+            )
+        )
+
+
+        val request = QueryRequest.newBuilder().apply {
+            sourceIdBuilder.setId(sourceId)
+            queryIdBuilder.setId(queryId)
+        }.build()
+
+        runBlocking(Dispatchers.IO) {
+            val reader = DataBaseReader.createDataBaseReader(
+                cfg,
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+            )
+
+            val service = DataBaseReaderGrpcServer(
+                reader,
+                { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
+                { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
+                onEvent,
+            )
+
+            val responses: List<QueryResponse> = GrpcTestHolder(service).use { (stub) ->
+                withCancellation {
+                    stub.execute(request).asSequence().toList()
+                }
+            }
+
+            val expectedData = listOf(person)
+
+            verifyNoInteractions(genericUpdateListener)
+            verifyNoInteractions(messageLoader)
+
+            val executionIds = hashSetOf<Long>()
+            genericRowListener.assertCaptured(expectedData).also(executionIds::add)
+            responses.assert(expectedData).also(executionIds::add)
+            onEvent.assertCaptured(cfg, request, 1_000).also(executionIds::add)
+            assertEquals(1, executionIds.size, "execution ids mismatch $executionIds")
+        }
+    }
+
     private fun RowListener.assertCaptured(persons: List<Person>): Long {
         val captor = argumentCaptor<TableRow>()
         verify(this, times(persons.size)).onRow(any(), captor.capture())
@@ -212,7 +288,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
             Person(
                 checkNotNull(it.columns["name"]).toString(),
                 (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                (checkNotNull(it.columns["data"]) as ByteArray),
+                it.columns["data"] as ByteArray?,
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -230,7 +306,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
             Person(
                 response.getRowOrThrow("name").toString(),
                 LocalDate.parse(response.getRowOrThrow("birthday")).atStartOfDay().toInstant(ZoneOffset.UTC),
-                decodeHexDump(response.getRowOrThrow("data")),
+                if (response.containsRow("data")) decodeHexDump(response.getRowOrThrow("data")) else null,
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -282,7 +358,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
                       `id` INT NOT NULL AUTO_INCREMENT,
                       `name` VARCHAR(45) NOT NULL,
                       `birthday` DATE NOT NULL,
-                      `data` BLOB NOT NULL,
+                      `data` BLOB,
                       PRIMARY KEY (`id`));
                 """.trimIndent()
             )
@@ -312,7 +388,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         for (person in persons) {
             prepareStatement.setString(1, person.name)
             prepareStatement.setDate(2, Date(person.birthday.toEpochMilli()))
-            prepareStatement.setBlob(3, ByteArrayInputStream(person.data))
+            prepareStatement.setBlob(3, person.data?.let { ByteArrayInputStream(it) })
             prepareStatement.addBatch()
         }
         prepareStatement.executeBatch()
