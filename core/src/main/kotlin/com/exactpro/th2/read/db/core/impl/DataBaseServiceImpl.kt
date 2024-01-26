@@ -101,9 +101,9 @@ class DataBaseServiceImpl(
                         )
                     }
                 }
-
-                LOGGER.trace { "Closing connection to $dataSourceId" }
+                LOGGER.info { "Query $queryId for $dataSourceId connection was executed" }
             } finally {
+                LOGGER.trace { "Closing connection to $dataSourceId" }
                 runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
             }
         }

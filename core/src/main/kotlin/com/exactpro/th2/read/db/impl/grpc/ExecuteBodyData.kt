@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.core
+package com.exactpro.th2.read.db.impl.grpc
 
+import com.exactpro.th2.common.event.IBodyData
+import com.exactpro.th2.read.db.app.ExecuteQueryRequest
+import com.exactpro.th2.read.db.core.DataSourceConfiguration
+import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.fasterxml.jackson.annotation.JsonInclude
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-data class QueryConfiguration(
-    val query: String,
-    val defaultParameters: QueryParametersValues = emptyMap(),
-    val messageType: String? = null,
-)
+data class ExecuteBodyData(
+    val executionId: Long,
+    val dataSource: DataSourceConfiguration,
+    val beforeQueries: List<QueryConfiguration> = emptyList(),
+    val query: QueryConfiguration,
+    val afterQueries: List<QueryConfiguration> = emptyList(),
+    val request: ExecuteQueryRequest,
+) : IBodyData

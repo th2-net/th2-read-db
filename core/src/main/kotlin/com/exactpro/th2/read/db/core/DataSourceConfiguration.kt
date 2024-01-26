@@ -16,9 +16,14 @@
 
 package com.exactpro.th2.read.db.core
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class DataSourceConfiguration(
     val url: String,
     val username: String? = null,
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     val password: String? = null,
     val properties: Map<String, String> = emptyMap(),
 )

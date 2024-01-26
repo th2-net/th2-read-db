@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,18 @@
 
 package com.exactpro.th2.read.db.impl.grpc
 
+import com.exactpro.th2.common.event.Event
+import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.message.toJavaDuration
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.app.PullTableRequest
+import com.exactpro.th2.read.db.bootstrap.toStringValue
+import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
+import com.exactpro.th2.read.db.core.QueryConfiguration
+import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
@@ -37,32 +43,48 @@ import com.google.protobuf.Empty
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import com.exactpro.th2.read.db.grpc.QueryId as ProtoQueryId
 
 class DataBaseReaderGrpcServer(
     private val app: DataBaseReader,
+    private val getSourceCfg: (DataSourceId) -> DataSourceConfiguration,
+    private val getQueryCfg: (QueryId) -> QueryConfiguration,
+    private val onEvent: OnEvent,
 ) : ReadDbGrpc.ReadDbImplBase() {
     override fun execute(request: QueryRequest, responseObserver: StreamObserver<QueryResponse>) {
-        LOGGER.info { "Executing 'execute' grpc request ${request.toJson()}" }
+        val executionId = EXECUTION_COUNTER.incrementAndGet()
+        LOGGER.info { "Executing 'execute' grpc request ${request.toJson()}, execution id: $executionId" }
+        val event = Event.start()
+            .name("Execute '${request.queryId.id}' query ($executionId)")
+            .type("read-db.execute")
+        val parentEventId: EventID? = if (request.hasParentEventId()) request.parentEventId else null
         try {
             val associatedMessageType: String? = if (request.hasAssociatedMessageType()) request.associatedMessageType.name else null
+            val executeQueryRequest = request.run {
+                ExecuteQueryRequest(
+                    sourceId.toModel(),
+                    beforeQueryIdsList.map(ProtoQueryId::toModel),
+                    queryId.toModel(),
+                    afterQueryIdsList.map(ProtoQueryId::toModel),
+                    parameters.toModel(),
+                )
+            }
+            event.bodyData(executeQueryRequest.toBody(executionId))
             app.executeQuery(
-                request.run {
-                    ExecuteQueryRequest(
-                        sourceId.toModel(),
-                        beforeQueryIdsList.map(ProtoQueryId::toModel),
-                        queryId.toModel(),
-                        afterQueryIdsList.map(ProtoQueryId::toModel),
-                        parameters.toModel(),
-                    )
-                },
-                GrpcResultListener(responseObserver),
-            ) { row ->
-                associatedMessageType?.let { row.copy(associatedMessageType = it) } ?: row
+                executeQueryRequest,
+                GrpcResultListener(responseObserver, event) {
+                    onEvent.accept(it, parentEventId)
+                }) { row ->
+                row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
             }
         } catch (ex: Exception) {
             LOGGER.error(ex) { "cannot execute request ${request.toJson()}" }
             responseObserver.onError(Status.INTERNAL.withDescription(ex.message).asRuntimeException())
+            event.exception(ex, true)
+                .also { onEvent.accept(it, parentEventId) }
         }
     }
 
@@ -121,23 +143,43 @@ class DataBaseReaderGrpcServer(
 
     private class GrpcResultListener(
         private val observer: StreamObserver<QueryResponse>,
+        private val event: Event,
+        private val onEvent: (Event) -> Unit,
     ) : ResultListener {
         override fun onRow(sourceId: DataSourceId, row: TableRow) {
+            requireNotNull(row.executionId) {
+                "'Execution id' is null for row: $row"
+            }
             observer.onNext(
                 QueryResponse.newBuilder()
-                    .putAllRow(row.columns.mapValues { it.value.toString() })
+                    .putRows(row)
+                    .setExecutionId(row.executionId)
                     .build()
             )
         }
 
         override fun onError(error: Throwable) {
             observer.onError(error)
+            event.endTimestamp()
+                .exception(error, true)
+                .also(onEvent)
         }
 
         override fun onComplete() {
             observer.onCompleted()
+            event.endTimestamp()
+                .also(onEvent)
         }
     }
+
+    private fun ExecuteQueryRequest.toBody(executionId: Long) = ExecuteBodyData(
+        executionId,
+        getSourceCfg(sourceId),
+        before.map(getQueryCfg),
+        getQueryCfg(queryId),
+        after.map(getQueryCfg),
+        this
+    )
 
     private object DummyUpdateListener : UpdateListener {
         override fun onUpdate(dataSourceId: DataSourceId, row: TableRow, properties: Map<String, String>) = Unit
@@ -149,5 +191,22 @@ class DataBaseReaderGrpcServer(
 
     companion object {
         private val LOGGER = KotlinLogging.logger { }
+
+        private val EXECUTION_COUNTER = AtomicLong(
+            Instant.now().run { epochSecond * TimeUnit.SECONDS.toNanos(1) + nano }
+        )
+
+        private fun QueryResponse.Builder.putRows(tableRow: TableRow) = apply {
+            tableRow.columns.forEach { (key, value) ->
+                // null values should be skipped because they aren't supported by Protobuf
+                if (value != null) {
+                    putRow(key, value.toStringValue())
+                }
+            }
+        }
     }
+}
+
+fun interface OnEvent {
+    fun accept(event: Event, parentEventID: EventID?)
 }

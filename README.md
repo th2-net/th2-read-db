@@ -1,4 +1,4 @@
-# th2-read-db 0.6.0
+# th2-read-db 0.7.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -44,6 +44,9 @@ publication:
   queueSize: 1000
   maxDelayMillis: 1000
   maxBatchSize: 100
+eventPublication:
+  maxBatchSizeInItems: 100
+  maxFlushTime: 1000
 ```
 
 ## Parameters
@@ -65,6 +68,7 @@ The list of queries that can be executed by read-db.
   It might contain parameters in the following format: `${<name>[:<type>]}`.
   The **type** part can be omitted if the type is `varchar`.
   Examples: `${id:integer}`, `${registration_time:timestamp}`, `${first_name}`
+  [Types](https://docs.oracle.com/javase/8/docs/api/java/sql/JDBCType.html): bit, tinyint, smallint, integer, bigint, float, real, double, numeric, decimal, char, varchar, longvarchar, date, time, timestamp, binary, varbinary, longvarbinary, null, other, java_object, distinct, struct, array, blob, clob, ref, datalink, boolean, rowid, nchar, nvarchar, longnvarchar, nclob, sqlxml, ref_cursor, time_with_timezone, timestamp_with_timezone
 + defaultParameters - the default values for parameters. They will be used if the parameter was not specified in the request
 + messageType - the message type that should be associated with this query.
   If it is set the read-db will set a property `th2.csv.override_message_type` with specified value
@@ -126,7 +130,10 @@ You can interact with read-db via gRPC. It supports executing direct queries and
 # Publication
 
 The read-db publishes all extracted data to MQ as raw messages in CSV format. The alias matches the **data source id**.
-Message might contain property `th2.csv.override_message_type` with value that should be used as message type for the row message
+Message might contain properties
+* `th2.csv.override_message_type` with value that should be used as message type for the row message
+* `th2.read-db.execute.uid` with unique identifier of query execution
+* `th2.pull_task.update_hash` with hash of source and query configuration used pull query execution 
 
 # gRPC
 
@@ -134,6 +141,39 @@ Message might contain property `th2.csv.override_message_type` with value that s
 
 Pull task tries to load the last message published to Cradle instead of initialise from the start 
 if you connect read-db to a data-provider using `com.exactpro.th2.dataprovider.lw.grpc.DataProviderService`. 
+
+## Server
+
+### Execute method
+
+User can trigger a query execution on a data source using this method. the method includes the activities:
+* generation of growing unique id.
+* query execution.
+* publication results of the query execution to MQ where each message has `th2.read-db.execute.uid` property with the unique id
+* publication event with data source, query, request parameters and the unique id. 
+  Start/End even times correspond to the beginning/ending the query execution.
+  Body example:
+  ```json
+  [
+    {
+      "dataSource": {
+        "url":"jdbc url for data base connection",
+        "username":"user name"
+      },
+      "query": {
+        "query":"SQL query text"
+      },
+      "parameters": {
+        "parameter": [
+          "parameter value"
+        ]
+      },
+      "executionId": 123
+    }
+  ]
+  ```
+  NOTE: the event hasn't got attached message because the query can produce a lot of rows.
+* streaming results of the query execution with the unique id as gRPC response. 
 
 # CR example
 ## infra 1
@@ -144,7 +184,7 @@ metadata:
   name: read-db
 spec:
   image-name: ghcr.io/th2-net/th2-read-db
-  image-version: 0.0.1
+  image-version: 0.7.0-dev
   type: th2-read
   custom-config:
     dataSources:
@@ -182,6 +222,9 @@ spec:
       queueSize: 1000
       maxDelayMillis: 1000
       maxBatchSize: 100
+    eventPublication:
+      maxBatchSizeInItems: 100
+      maxFlushTime: 1000
     useTransport: true
   pins:
     - name: client
@@ -217,7 +260,7 @@ metadata:
   name: read-db
 spec:
   imageName: ghcr.io/th2-net/th2-read-db
-  imageVersion: 0.0.1
+  imageVersion: 0.7.0-dev
   type: th2-read
   customConfig:
     dataSources:
@@ -256,6 +299,9 @@ spec:
       queueSize: 1000
       maxDelayMillis: 1000
       maxBatchSize: 100
+    eventPublication:
+      maxBatchSizeInItems: 100
+      maxFlushTime: 1000
     useTransport: true
   pins:
     mq:
@@ -288,7 +334,20 @@ spec:
         cpu: 50m
 ```
 
+### Oracle redo logs
+[How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
+
 ## Changes
+
+### 0.7.0
+
+#### Feature:
+
++ gRPC execute method generates unique id for each execution and puts it into related event and messages.
+
+#### Fix:
+
++ gRPC Execute method doesn't respond rows with null values. gRPC server implementation skips columns with null value after fix.
 
 ### 0.6.0
 

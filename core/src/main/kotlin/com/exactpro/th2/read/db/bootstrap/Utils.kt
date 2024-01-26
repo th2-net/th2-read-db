@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import java.math.BigDecimal
 import com.exactpro.th2.common.grpc.RawMessage as ProtoRawMessage
 
 internal const val TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY = "th2.csv.override_message_type"
+private const val TH2_READ_DB_UNIQUE_ID = "th2.read-db.execute.uid"
 private const val SEPARATOR = ','
 
 internal fun TableRow.toProtoMessage(dataSourceId: DataSourceId, properties: Map<String, String>): ProtoRawMessage.Builder {
@@ -64,6 +65,9 @@ internal fun TableRow.toTransportMessage(dataSourceId: DataSourceId, properties:
 
     if (associatedMessageType != null) {
         builder.addMetadataProperty(TH2_CSV_OVERRIDE_MESSAGE_TYPE_PROPERTY, associatedMessageType)
+    }
+    if (executionId != null) {
+        builder.addMetadataProperty(TH2_READ_DB_UNIQUE_ID, executionId.toString())
     }
     properties.forEach(builder::addMetadataProperty)
 
@@ -124,7 +128,7 @@ internal fun MessageSearchResponse.toTableRow(): TableRow {
     }
 }
 
-private fun Any.toStringValue(): String = when (this) {
+internal fun Any.toStringValue(): String = when (this) {
     is BigDecimal -> stripTrailingZeros().toPlainString()
     is Double -> toBigDecimal().toStringValue()
     is Float -> toBigDecimal().toStringValue()

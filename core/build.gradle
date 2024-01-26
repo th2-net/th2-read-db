@@ -58,6 +58,7 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind"
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
     testImplementation "org.mockito.kotlin:mockito-kotlin:5.1.0"
     testImplementation "io.strikt:strikt-core:0.34.1"
@@ -66,6 +67,9 @@ dependencies {
     testImplementation "org.testcontainers:testcontainers"
     testImplementation "org.testcontainers:mysql"
     testImplementation "org.testcontainers:oracle-xe"
+    testImplementation "io.grpc:grpc-testing"
+
+    testImplementation 'com.exactpro.th2:junit-jupiter-integration:0.0.1-master-6956603819-5241ee5-SNAPSHOT'
 
     testRuntimeOnly("com.mysql:mysql-connector-j:8.1.0") {
         because("mysql support")
