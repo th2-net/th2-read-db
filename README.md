@@ -1,4 +1,4 @@
-# th2-read-db 0.7.0
+# th2-read-db 0.8.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -338,6 +338,11 @@ spec:
 [How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
+
+### 0.8.0
+
++ implemented the `Load` gRPC method.
++ fixed the catching java Error such as OutOfMemoryError problem
 
 ### 0.7.0
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.exception.QueryExecutionException
 import com.exactpro.th2.read.db.core.get
 import com.exactpro.th2.read.db.core.util.getColumnValue
+import com.exactpro.th2.read.db.core.util.runCatchingException
 import com.exactpro.th2.read.db.core.util.set
 import com.exactpro.th2.read.db.core.util.setCollection
 import kotlinx.coroutines.flow.Flow
@@ -64,7 +65,7 @@ class DataBaseServiceImpl(
         LOGGER.trace { "Final execution parameters: $finalParameters" }
         val resultSet: ResultSet = try {
             beforeQueryHolders.forEach { holder ->
-                runCatching {
+                runCatchingException {
                     execute(connection, holder, finalParameters)
                 }.getOrElse {
                     throw QueryExecutionException(
@@ -93,7 +94,7 @@ class DataBaseServiceImpl(
                 reason?.also { LOGGER.warn(it) { "query $queryId completed with exception for $dataSourceId source" } }
 
                 afterQueryHolders.forEach { holder ->
-                    runCatching {
+                    runCatchingException {
                         execute(connection, holder, finalParameters)
                     }.getOrElse {
                         throw QueryExecutionException(
@@ -104,7 +105,7 @@ class DataBaseServiceImpl(
                 LOGGER.info { "Query $queryId for $dataSourceId connection was executed" }
             } finally {
                 LOGGER.trace { "Closing connection to $dataSourceId" }
-                runCatching { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
+                runCatchingException { connection.close() }.onFailure { LOGGER.error(it) { "cannot close connection for $dataSourceId" } }
             }
         }
     }

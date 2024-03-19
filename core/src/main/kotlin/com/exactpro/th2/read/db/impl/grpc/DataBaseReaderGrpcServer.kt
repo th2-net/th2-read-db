@@ -20,6 +20,7 @@ import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.message.toJavaDuration
 import com.exactpro.th2.common.message.toJson
+import com.exactpro.th2.common.utils.message.toTimestamp
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.ExecuteQueryRequest
 import com.exactpro.th2.read.db.app.PullTableRequest
@@ -33,6 +34,7 @@ import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
 import com.exactpro.th2.read.db.grpc.DbPullRequest
 import com.exactpro.th2.read.db.grpc.DbPullResponse
+import com.exactpro.th2.read.db.grpc.QueryReport
 import com.exactpro.th2.read.db.grpc.QueryRequest
 import com.exactpro.th2.read.db.grpc.QueryResponse
 import com.exactpro.th2.read.db.grpc.ReadDbGrpc
@@ -40,6 +42,7 @@ import com.exactpro.th2.read.db.grpc.StopPullingRequest
 import com.exactpro.th2.read.db.impl.grpc.util.toGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
+import com.google.protobuf.Message
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
@@ -55,36 +58,21 @@ class DataBaseReaderGrpcServer(
     private val onEvent: OnEvent,
 ) : ReadDbGrpc.ReadDbImplBase() {
     override fun execute(request: QueryRequest, responseObserver: StreamObserver<QueryResponse>) {
-        val executionId = EXECUTION_COUNTER.incrementAndGet()
-        LOGGER.info { "Executing 'execute' grpc request ${request.toJson()}, execution id: $executionId" }
-        val event = Event.start()
-            .name("Execute '${request.queryId.id}' query ($executionId)")
-            .type("read-db.execute")
-        val parentEventId: EventID? = if (request.hasParentEventId()) request.parentEventId else null
-        try {
-            val associatedMessageType: String? = if (request.hasAssociatedMessageType()) request.associatedMessageType.name else null
-            val executeQueryRequest = request.run {
-                ExecuteQueryRequest(
-                    sourceId.toModel(),
-                    beforeQueryIdsList.map(ProtoQueryId::toModel),
-                    queryId.toModel(),
-                    afterQueryIdsList.map(ProtoQueryId::toModel),
-                    parameters.toModel(),
-                )
+        execute("execute", request, responseObserver) { event, parentEventId, _ ->
+            GrpcExecuteListener(responseObserver, event) {
+                onEvent.accept(it, parentEventId)
             }
-            event.bodyData(executeQueryRequest.toBody(executionId))
-            app.executeQuery(
-                executeQueryRequest,
-                GrpcResultListener(responseObserver, event) {
-                    onEvent.accept(it, parentEventId)
-                }) { row ->
-                row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
+        }
+    }
+
+    override fun load(request: QueryRequest, responseObserver: StreamObserver<QueryReport>) {
+        execute("load", request, responseObserver) { event, parentEventId, executionId ->
+            val report = QueryReport.newBuilder()
+                .setStart(event.startTimestamp.toTimestamp())
+                .setExecutionId(executionId)
+            GrpcLoadListener(responseObserver, report, event) {
+                onEvent.accept(it, parentEventId)
             }
-        } catch (ex: Exception) {
-            LOGGER.error(ex) { "cannot execute request ${request.toJson()}" }
-            responseObserver.onError(Status.INTERNAL.withDescription(ex.message).asRuntimeException())
-            event.exception(ex, true)
-                .also { onEvent.accept(it, parentEventId) }
         }
     }
 
@@ -141,7 +129,45 @@ class DataBaseReaderGrpcServer(
         }
     }
 
-    private class GrpcResultListener(
+    private fun <T: Message> execute(
+        name: String,
+        request: QueryRequest,
+        responseObserver: StreamObserver<T>,
+        createListener: (Event, EventID?, Long) -> ResultListener
+    ) {
+        val executionId = EXECUTION_COUNTER.incrementAndGet()
+        LOGGER.info { "Executing '$name' grpc request ${request.toJson()}, execution id: $executionId" }
+        val event = Event.start()
+            .name("Execute '${request.queryId.id}' query ($executionId)")
+            .type("read-db.execute")
+        val parentEventId: EventID? = if (request.hasParentEventId()) request.parentEventId else null
+        try {
+            val associatedMessageType: String? = if (request.hasAssociatedMessageType()) request.associatedMessageType.name else null
+            val executeQueryRequest = request.run {
+                ExecuteQueryRequest(
+                    sourceId.toModel(),
+                    beforeQueryIdsList.map(ProtoQueryId::toModel),
+                    queryId.toModel(),
+                    afterQueryIdsList.map(ProtoQueryId::toModel),
+                    parameters.toModel(),
+                )
+            }
+            event.bodyData(executeQueryRequest.toBody(executionId))
+            app.executeQuery(
+                executeQueryRequest,
+                createListener(event, parentEventId, executionId),
+                ) { row ->
+                row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
+            }
+        } catch (ex: Exception) {
+            LOGGER.error(ex) { "cannot execute request ${request.toJson()}" }
+            responseObserver.onError(Status.INTERNAL.withDescription(ex.message).asRuntimeException())
+            event.exception(ex, true)
+                .also { onEvent.accept(it, parentEventId) }
+        }
+    }
+
+    private class GrpcExecuteListener(
         private val observer: StreamObserver<QueryResponse>,
         private val event: Event,
         private val onEvent: (Event) -> Unit,
@@ -169,6 +195,38 @@ class DataBaseReaderGrpcServer(
             observer.onCompleted()
             event.endTimestamp()
                 .also(onEvent)
+        }
+    }
+
+    private class GrpcLoadListener(
+        private val observer: StreamObserver<QueryReport>,
+        private val report: QueryReport.Builder,
+        private val event: Event,
+        private val onEvent: (Event) -> Unit,
+    ) : ResultListener {
+        private val counter = AtomicLong()
+
+        override fun onRow(sourceId: DataSourceId, row: TableRow) {
+            check(report.executionId == row.executionId) {
+                "'Execution id' isn't equal to '${report.executionId}', row: $row"
+            }
+            counter.incrementAndGet()
+        }
+
+        override fun onError(error: Throwable) {
+            observer.onError(error)
+            event.endTimestamp()
+                .exception(error, true)
+                .also(onEvent)
+        }
+
+        override fun onComplete() {
+            event.endTimestamp()
+            report.setRowsReceived(counter.get())
+                .setEnd(event.endTimestamp.toTimestamp())
+            observer.onNext(report.build())
+            observer.onCompleted()
+            onEvent(event)
         }
     }
 

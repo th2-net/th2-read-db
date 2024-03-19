@@ -1,12 +1,16 @@
-# gRPC for read-db (0.0.7)
+# gRPC for read-db (0.0.8)
 
 The read-db provides you with gRPC interface for interacting with database.
 You can:
 
-+ request data synchronously - `Execute` method
++ request data synchronously - `Execute` method. This method returns rows as stream.
++ run data loading synchronously - `Load` method. This method returns aggregated execution report.
 + submit pulling requests and stop them - `StartPulling` and `StopPulling` methods
 
 # Release notes:
+
+## 0.0.8
++ added `Load` method
 
 ## 0.0.7
 + added execution_id to the QueryResponse
