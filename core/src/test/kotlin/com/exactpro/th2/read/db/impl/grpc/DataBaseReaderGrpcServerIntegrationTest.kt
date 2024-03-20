@@ -21,6 +21,7 @@ import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.EventStatus
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
+import com.exactpro.th2.common.utils.toInstant
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
@@ -33,11 +34,13 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
+import com.exactpro.th2.read.db.grpc.QueryReport
 import com.exactpro.th2.read.db.grpc.QueryRequest
 import com.exactpro.th2.read.db.grpc.QueryResponse
 import com.exactpro.th2.read.db.grpc.ReadDbGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.ByteString
+import com.google.protobuf.util.Timestamps
 import io.grpc.BindableService
 import io.grpc.Context
 import io.grpc.ManagedChannel
@@ -56,6 +59,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.timeout
@@ -67,6 +71,8 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
+import strikt.assertions.isGreaterThan
+import strikt.assertions.isLessThan
 import strikt.assertions.isSameInstanceAs
 import java.io.ByteArrayInputStream
 import java.sql.Connection
@@ -77,6 +83,7 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 
 @IntegrationTest
@@ -203,6 +210,100 @@ class DataBaseReaderGrpcServerIntegrationTest {
             responses.assert(expectedData).also(executionIds::add)
             onEvent.assertCaptured(cfg, request, 1_000).also(executionIds::add)
             assertEquals(1, executionIds.size, "execution ids mismatch $executionIds")
+        }
+    }
+
+    @Test
+    fun `load gRPC request test`() {
+        var firstTimestamp: Instant? = null
+        var lastTimestamp: Instant? = null
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> {
+            on { onRow(any(), any()) }.doAnswer {
+                if (firstTimestamp == null) {
+                    Instant.now().let {
+                        firstTimestamp = it
+                        lastTimestamp = it
+                    }
+                } else {
+                    lastTimestamp = Instant.now()
+                }
+            }
+        }
+        val messageLoader = mock<MessageLoader> { }
+        val onEvent = mock<OnEvent> { }
+
+        val sourceId = "persons"
+        val queryId = "select"
+        val cfg = DataBaseReaderConfiguration(
+            dataSources = mapOf(
+                DataSourceId(sourceId) to DataSourceConfiguration(
+                    mysql.jdbcUrl,
+                    mysql.username,
+                    mysql.password,
+                )
+            ),
+            queries = mapOf(
+                QueryId(queryId) to QueryConfiguration(
+                    "SELECT * FROM test_data.person WHERE \${fromId:integer} < id AND id < \${toId:integer}",
+                    mapOf(
+                        "fromId" to listOf(Int.MIN_VALUE.toString()),
+                        "toId" to listOf(Int.MAX_VALUE.toString())
+                    )
+                ),
+            )
+        )
+        val request = QueryRequest.newBuilder().apply {
+            sourceIdBuilder.setId(sourceId)
+            queryIdBuilder.setId(queryId)
+            parametersBuilder
+                .putValues("fromId", "10")
+                .putValues("toId", "20")
+        }.build()
+
+        runBlocking(Dispatchers.IO) {
+            val reader = DataBaseReader.createDataBaseReader(
+                cfg,
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+            )
+
+            val service = DataBaseReaderGrpcServer(
+                reader,
+                { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
+                { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
+                onEvent,
+            )
+
+            val start = Instant.now()
+            val report: QueryReport = GrpcTestHolder(service).use { (stub) ->
+                withCancellation { stub.load(request) }
+            }
+            val end = Instant.now()
+
+            val expectedData = persons.asSequence().drop(10).take(9).toList()
+
+            verifyNoInteractions(genericUpdateListener)
+            verifyNoInteractions(messageLoader)
+
+            assertNotNull(lastTimestamp)
+
+            expectThat(report) {
+                get { executionId }.isGreaterThan(0)
+                get { rowsReceived }.isEqualTo(expectedData.size.toLong())
+                get { this.start.toInstant() }.isGreaterThan(start).isLessThan(assertNotNull(firstTimestamp))
+                get { this.end.toInstant() }.isGreaterThan(assertNotNull(lastTimestamp)).isLessThan(end)
+            }
+            assertTrue(Timestamps.comparator().compare(report.start, report.end) < 0)
+
+            genericRowListener.assertCaptured(expectedData).also { executionId ->
+                assertEquals(report.executionId, executionId)
+            }
+            onEvent.assertCaptured(cfg, request, 0).also { executionId ->
+                assertEquals(report.executionId, executionId)
+            }
         }
     }
 

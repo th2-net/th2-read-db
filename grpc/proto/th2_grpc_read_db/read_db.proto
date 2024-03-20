@@ -11,6 +11,7 @@ option java_multiple_files = true;
 option java_package = "com.exactpro.th2.read.db.grpc";
 
 service ReadDb {
+  rpc Load (QueryRequest) returns (QueryReport);
   rpc Execute (QueryRequest) returns (stream QueryResponse);
   rpc StartPulling (DbPullRequest) returns (DbPullResponse);
   rpc StopPulling (StopPullingRequest) returns (google.protobuf.Empty);
@@ -36,6 +37,13 @@ message QueryRequest {
   repeated QueryId before_query_ids = 5;
   repeated QueryId after_query_ids = 6;
   EventID parent_event_id = 7;
+}
+
+message QueryReport {
+  int64 execution_id = 1;
+  int64 rows_received = 2;
+  google.protobuf.Timestamp start = 3;
+  google.protobuf.Timestamp end = 4;
 }
 
 message QueryResponse {
