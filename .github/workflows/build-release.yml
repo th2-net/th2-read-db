@@ -124,5 +124,4 @@ jobs:
     needs: [ app-version, publish-docker, build-and-publish-core-java ]
     uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
     with:
-      runsOn: ${{ inputs.runsOn }}
       tagName: ${{ needs.app-version.outputs.version }}
