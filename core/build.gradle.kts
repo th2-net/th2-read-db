@@ -18,8 +18,8 @@ configurations.all {
 dependencies {
     implementation(project(":grpc-read-db"))
 
-    implementation("com.exactpro.th2:common:5.7.1-dev")
-    implementation("com.exactpro.th2:common-utils:2.2.0-dev")
+    implementation("com.exactpro.th2:common:5.10.0-dev")
+    implementation("com.exactpro.th2:common-utils:2.2.2-dev")
     implementation("com.exactpro.th2:lw-data-provider-utils:0.0.1-dev")
 
     implementation("org.slf4j:slf4j-api")
@@ -28,7 +28,7 @@ dependencies {
         because("connection pool")
     }
     implementation("org.apache.commons:commons-text")
-    implementation("com.opencsv:opencsv:5.8") {
+    implementation("com.opencsv:opencsv:5.9") {
         because("publishes raw messages in csv format")
     }
 
@@ -42,7 +42,7 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
     testImplementation("io.strikt:strikt-core:0.34.1")
 
-    testImplementation(platform("org.testcontainers:testcontainers-bom:1.19.0"))
+    testImplementation(platform("org.testcontainers:testcontainers-bom:1.19.7"))
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:mysql")
     testImplementation("org.testcontainers:oracle-xe")
@@ -51,10 +51,10 @@ dependencies {
 
     testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
 
-    testRuntimeOnly("com.mysql:mysql-connector-j:8.1.0") {
+    testRuntimeOnly("com.mysql:mysql-connector-j:8.3.0") {
         because("mysql support")
     }
-    testRuntimeOnly("com.oracle.database.jdbc:ojdbc11:23.2.0.0") {
+    testRuntimeOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
         because("oracle support")
     }
 }

@@ -10,7 +10,7 @@ configurations.all {
 }
 
 dependencies {
-    api("com.exactpro.th2:grpc-common:4.3.0-dev")
+    api("com.exactpro.th2:grpc-common:4.4.0-dev")
 }
 
 th2Grpc {

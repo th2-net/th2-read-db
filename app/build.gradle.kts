@@ -12,13 +12,13 @@ dependencies {
     implementation(project(":read-db-core"))
 
     //region Drivers
-    runtimeOnly("org.postgresql:postgresql:42.6.0") {
+    runtimeOnly("org.postgresql:postgresql:42.7.3") {
         because("prostresql support")
     }
-    runtimeOnly("com.mysql:mysql-connector-j:8.1.0") {
+    runtimeOnly("com.mysql:mysql-connector-j:8.3.0") {
         because("mysql support")
     }
-    runtimeOnly("com.oracle.database.jdbc:ojdbc11:23.2.0.0") {
+    runtimeOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
         because("oracle support")
     }
     runtimeOnly("com.microsoft.sqlserver:mssql-jdbc:12.4.0.jre11") {

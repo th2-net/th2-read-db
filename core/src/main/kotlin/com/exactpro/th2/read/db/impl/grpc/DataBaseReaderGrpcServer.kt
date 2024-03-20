@@ -44,6 +44,8 @@ import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
 import com.google.protobuf.Message
 import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
 import java.time.Instant
@@ -58,8 +60,8 @@ class DataBaseReaderGrpcServer(
     private val onEvent: OnEvent,
 ) : ReadDbGrpc.ReadDbImplBase() {
     override fun execute(request: QueryRequest, responseObserver: StreamObserver<QueryResponse>) {
-        execute("execute", request, responseObserver) { event, parentEventId, _ ->
-            GrpcExecuteListener(responseObserver, event) {
+        execute("execute", request, responseObserver) { event, parentEventId, executionId ->
+            GrpcExecuteListener(responseObserver, executionId, event) {
                 onEvent.accept(it, parentEventId)
             }
         }
@@ -155,8 +157,8 @@ class DataBaseReaderGrpcServer(
             event.bodyData(executeQueryRequest.toBody(executionId))
             app.executeQuery(
                 executeQueryRequest,
-                createListener(event, parentEventId, executionId),
-                ) { row ->
+                createListener(event, parentEventId, executionId)
+            ) { row ->
                 row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
             }
         } catch (ex: Exception) {
@@ -168,20 +170,38 @@ class DataBaseReaderGrpcServer(
     }
 
     private class GrpcExecuteListener(
-        private val observer: StreamObserver<QueryResponse>,
+        streamObserver: StreamObserver<QueryResponse>,
+        private val executionId: Long,
         private val event: Event,
         private val onEvent: (Event) -> Unit,
     ) : ResultListener {
+        private val skipped = AtomicLong()
+        private val observer = streamObserver as ServerCallStreamObserver<QueryResponse>
+
         override fun onRow(sourceId: DataSourceId, row: TableRow) {
-            requireNotNull(row.executionId) {
-                "'Execution id' is null for row: $row"
+            check(executionId == row.executionId) {
+                "'Execution id' isn't equal to '$executionId', row: $row"
             }
-            observer.onNext(
-                QueryResponse.newBuilder()
-                    .putRows(row)
-                    .setExecutionId(row.executionId)
-                    .build()
-            )
+
+            while (!observer.isReady) {
+                if (observer.isCancelled) {
+                    skipped.incrementAndGet()
+                    return
+                }
+                Thread.yield()
+            }
+
+            try {
+                observer.onNext(
+                    QueryResponse.newBuilder()
+                        .putRows(row)
+                        .setExecutionId(row.executionId)
+                        .build()
+                )
+            } catch (e: StatusRuntimeException) {
+                LOGGER.error(e) { "Couldn't send next gRPC message for '$executionId' execution" }
+                skipped.incrementAndGet()
+            }
         }
 
         override fun onError(error: Throwable) {
@@ -189,12 +209,20 @@ class DataBaseReaderGrpcServer(
             event.endTimestamp()
                 .exception(error, true)
                 .also(onEvent)
+            logSkipped()
         }
 
         override fun onComplete() {
             observer.onCompleted()
             event.endTimestamp()
                 .also(onEvent)
+            logSkipped()
+        }
+
+        private fun logSkipped() {
+            if (skipped.get() > 0) {
+                LOGGER.warn { "gRPC consumer doesn't receives ${skipped.get()} rows for '$executionId' execution" }
+            }
         }
     }
 
