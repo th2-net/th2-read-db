@@ -1,17 +1,14 @@
 name: Build and publish read db project
 
-on:
-  push:
-    branches:
-      - master
-      - version-*
-    paths:
-      - app/gradle.properties
-      - grpc/gradle.properties
-      - core/gradle.properties
+on: workflow_dispatch
 
 jobs:
-  versions:
+  grpc-version:
+    name: Extract grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: grpc
+  app-version:
     name: Extract app version
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
@@ -39,7 +36,7 @@ jobs:
     needs:
       - changes
     if: ${{ needs.changes.outputs.grpc == 'true' }}
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build-release.yml@main
     with:
       projectPath: grpc
       release: true
@@ -65,7 +62,7 @@ jobs:
       - changes
       - build-and-publish-grpc-java
     if: ${{ needs.changes.outputs.core == 'true' }}
-    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build-release.yml@main
     with:
       projectPath: core
       release: true
@@ -92,12 +89,12 @@ jobs:
       - build-and-publish-grpc-python
       - build-and-publish-grpc-java
       - build-and-publish-core-java
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
-      version: ${{ needs.versions.outputs.version }}
-      versionNumber: ${{ needs.versions.outputs.version }}
+      version: ${{ needs.app-version.outputs.version }}
+      versionNumber: ${{ needs.app-version.outputs.version }}
       dockerContext: '.'
       gradleProjectPath: 'app'
       gradleParameters: '["clean", "build", "dockerPrepare"]'
@@ -107,9 +104,25 @@ jobs:
     name: Scan Docker image for vulnerabilities
     needs:
       - publish-docker
-      - versions
+      - app-version
     uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
     with:
-      image-path: ghcr.io/${{ github.repository }}:${{ needs.versions.outputs.version }}
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
+  create-grpc-tag:
+    if: !cancelled() && needs.build-and-publish-grpc-java.result == 'success' && needs.build-and-publish-grpc-python.result == 'success'
+    name: Create and push gRPC tag
+    needs: [ grpc-version, build-and-publish-grpc-java, build-and-publish-grpc-python ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.grpc-version.outputs.version }}-grpc
+  create-app-tag:
+    if: !cancelled() && needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success'
+    name: Create and push app tag
+    needs: [ app-version, publish-docker, build-and-publish-core-java ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.app-version.outputs.version }}
