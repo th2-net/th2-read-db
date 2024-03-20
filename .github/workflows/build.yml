@@ -49,7 +49,6 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
@@ -76,13 +75,14 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   owasp-scan:
     needs:
       - build-and-publish-core-java
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
+    secrets:
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   publish-docker:
     name: Build and publish docker image
     if: |

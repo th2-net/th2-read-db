@@ -117,14 +117,14 @@ jobs:
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
-
   owasp-scan:
     needs:
       - build-and-publish-core-java
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
-
+    secrets:
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   publish-docker:
     name: Build and publish docker image
     needs:
