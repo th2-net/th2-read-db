@@ -6,11 +6,6 @@ plugins {
 
 val coroutinesVersion by extra("1.7.3")
 
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
 kotlin {
     jvmToolchain(11)
 }
