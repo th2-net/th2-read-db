@@ -1,6 +1,5 @@
 plugins {
     id("org.jetbrains.kotlin.jvm")
-    id("com.google.protobuf")
     id("java-library")
     id("maven-publish")
 }
@@ -24,7 +23,6 @@ configurations.all {
 dependencies {
     implementation(project(":grpc-read-db"))
 
-    api(platform("com.exactpro.th2:bom:4.5.0"))
     implementation("com.exactpro.th2:common:5.7.1-dev")
     implementation("com.exactpro.th2:common-utils:2.2.0-dev")
     implementation("com.exactpro.th2:lw-data-provider-utils:0.0.1-dev")
