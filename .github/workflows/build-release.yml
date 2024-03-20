@@ -111,7 +111,7 @@ jobs:
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
   create-grpc-tag:
-    if: !cancelled() && needs.build-and-publish-grpc-java.result == 'success' && needs.build-and-publish-grpc-python.result == 'success'
+    if: needs.build-and-publish-grpc-java.result == 'success' && needs.build-and-publish-grpc-python.result == 'success' && !cancelled()
     name: Create and push gRPC tag
     needs: [ grpc-version, build-and-publish-grpc-java, build-and-publish-grpc-python ]
     uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
@@ -119,7 +119,7 @@ jobs:
       runsOn: ${{ inputs.runsOn }}
       tagName: ${{ needs.grpc-version.outputs.version }}-grpc
   create-app-tag:
-    if: !cancelled() && needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success'
+    if: needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success' && !cancelled()
     name: Create and push app tag
     needs: [ app-version, publish-docker, build-and-publish-core-java ]
     uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
