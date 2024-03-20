@@ -1,9 +1,6 @@
 name: Build and publish Docker distributions to Github Container Registry ghcr.io
 
-on:
-  push:
-    tags:
-      - \d+.\d+.\d+-dev
+on: workflow_dispatch
 
 jobs:
   get-previous-tag:
@@ -154,3 +151,19 @@ jobs:
       image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}-dev
       target: 'os,library'
       sensitivity: 'CRITICAL,HIGH,MEDIUM'
+  create-grpc-tag:
+    if: !cancelled() && needs.build-and-publish-grpc-java.result == 'success' && needs.build-and-publish-grpc-python.result == 'success'
+    name: Create and push gRPC tag
+    needs: [ grpc-version, build-and-publish-grpc-java, build-and-publish-grpc-python ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.grpc-version.outputs.version }}-grpc-dev
+  create-app-tag:
+    if: !cancelled() && needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success'
+    name: Create and push app tag
+    needs: [ app-version, publish-docker, build-and-publish-core-java ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.app-version.outputs.version }}-dev
