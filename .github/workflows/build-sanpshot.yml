@@ -1,0 +1,88 @@
+name: Build and publish dev build for read db project
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - version-*
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - .gitignore
+jobs:
+  grpc-version:
+    name: Collect grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: grpc
+  app-version:
+    name: Collect app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-dev-workflow.yml@main
+    with:
+      project-path: app
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    with:
+      projectPath: grpc
+      additionalTasks: '["publish"]'
+      release: false
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  build-and-publish-grpc-python:
+    name: Build and publish Python distributions to PyPI
+    needs:
+      - grpc-version
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
+    with:
+      custom-version: ${{ needs.grpc-version.outputs.versionNumber }}.dev${{ github.run_id }}
+      project-path: grpc
+    secrets:
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+  build-and-publish-core-java:
+    name: Build and publish Java core distributions
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    with:
+      projectPath: core
+      additionalTasks: '["publish"]'
+      release: false
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  owasp-scan:
+    needs:
+      - build-and-publish-core-java
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
+    with:
+      multiproject: true
+    secrets:
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
+  publish-docker:
+    name: Build docker image
+    needs:
+      - app-version
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.app-version.outputs.version }}
+      versionNumber: ${{ needs.app-version.outputs.versionNumber }}
+      dockerContext: '.'
+      gradleProjectPath: 'app'
+      gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Pversion_suffix={0}"]', needs.app-version.outputs.versionSuffix) }}
+    secrets:
+      docker-password: ${{ secrets.GITHUB_TOKEN }}
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - app-version
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'

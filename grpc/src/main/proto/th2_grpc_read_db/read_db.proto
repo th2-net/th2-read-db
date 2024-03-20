@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package th2.read_db;
+
+import "th2_grpc_common/common.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.exactpro.th2.read.db.grpc";
+
+service ReadDb {
+  rpc Load (QueryRequest) returns (QueryReport);
+  rpc Execute (QueryRequest) returns (stream QueryResponse);
+  rpc StartPulling (DbPullRequest) returns (DbPullResponse);
+  rpc StopPulling (StopPullingRequest) returns (google.protobuf.Empty);
+}
+
+message SourceId {
+  string id = 1;
+}
+
+message QueryId {
+  string id = 2;
+}
+
+message QueryParameters {
+  map<string, string> values = 1;
+}
+
+message QueryRequest {
+  SourceId source_id = 1;
+  QueryId query_id = 2;
+  QueryParameters parameters = 3;
+  AssociatedMessageType associated_message_type = 4;
+  repeated QueryId before_query_ids = 5;
+  repeated QueryId after_query_ids = 6;
+  EventID parent_event_id = 7;
+}
+
+message QueryReport {
+  int64 execution_id = 1;
+  int64 rows_received = 2;
+  google.protobuf.Timestamp start = 3;
+  google.protobuf.Timestamp end = 4;
+}
+
+message QueryResponse {
+  map<string, string> row = 1;
+  int64 execution_id = 2;
+}
+
+message AssociatedMessageType {
+  string name = 1;
+}
+
+message DbPullRequest {
+  SourceId source_id = 1;
+  QueryId init_query_id = 2;
+  QueryParameters init_parameters = 3;
+  repeated string use_columns = 4;
+  QueryId update_query_id = 5;
+  QueryParameters update_parameters = 6;
+  google.protobuf.Duration pull_interval = 7;
+  AssociatedMessageType associated_message_type = 8;
+  bool start_from_last_read_row = 9;
+  DbPullResetState reset_state_parameters = 10;
+  repeated QueryId before_init_query_ids = 11;
+  repeated QueryId after_init_query_ids = 12;
+  repeated QueryId before_update_query_ids = 13;
+  repeated QueryId after_update_query_ids = 14;
+}
+
+message DbPullResetState {
+  google.protobuf.Timestamp after_date = 1;
+  google.protobuf.Timestamp after_time = 2; // Only time units matter, value must contains '1970-01-01' date
+}
+
+message PullTaskId {
+  string id = 1;
+}
+
+message DbPullResponse {
+  PullTaskId id = 1;
+}
+
+message StopPullingRequest {
+  PullTaskId id = 1;
+}

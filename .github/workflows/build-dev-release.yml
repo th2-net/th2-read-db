@@ -1,0 +1,169 @@
+name: Build and publish Docker distributions to Github Container Registry ghcr.io
+
+on: workflow_dispatch
+
+jobs:
+  get-previous-tag:
+    name: Get previous tag
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 100
+          fetch-tags: true
+      - id: previous-tag
+        run: |
+          FOUND_TAG=$(git tag --list --sort=-version:refname '*.*.*-dev' | head --lines 2 | tail --lines 1)
+          echo "result=$FOUND_TAG" >> "$GITHUB_OUTPUT"
+          [[ -z $(echo "$FOUND_TAG") ]] && { echo "No tag found..."; exit 1; } || { echo "Tag found: ${FOUND_TAG}"; }
+    outputs:
+      tag: ${{ steps.previous-tag.outputs.result }}
+  changes:
+    name: Collect changed files
+    runs-on: ubuntu-20.04
+    needs:
+      - get-previous-tag
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      grpc: ${{ steps.filter.outputs.grpc }}
+      core: ${{ steps.filter.outputs.core }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          base: ${{ needs.get-previous-tag.outputs.tag }}
+          filters: |
+            app:
+              - 'app/gradle.properties'
+            grpc:
+              - 'grpc/gradle.properties'
+            core:
+              - 'core/gradle.properties'
+  grpc-version:
+    name: Extract grpc version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: grpc
+  app-version:
+    name: Extract app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: app
+
+  build-and-publish-grpc-java:
+    name: Build and publish Java gRPC distributions
+    runs-on: 'ubuntu-20.04'
+    needs:
+      - changes
+    if: ${{ needs.changes.outputs.grpc == 'true' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 'zulu' '11'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew --info -Pversion_suffix='dev' clean build :grpc-read-db:publish closeAndReleaseSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+
+  build-and-publish-grpc-python:
+    name: Build and publish Python distributions to PyPI
+    needs:
+      - build-and-publish-grpc-java
+      - grpc-version
+      - changes
+    if: ${{ needs.changes.outputs.grpc == 'true' }}
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
+    with:
+      custom-version: ${{ needs.grpc-version.outputs.version }}rc1
+      project-path: grpc
+    secrets:
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
+
+  build-and-publish-core-java:
+    name: Build and publish Java core distributions
+    runs-on: 'ubuntu-20.04'
+    needs:
+      - build-and-publish-grpc-java
+      - changes
+    if: |
+      always() &&
+      (needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 'zulu' '11'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew --info -Pversion_suffix='dev' clean build :read-db-core:publish closeAndReleaseSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  owasp-scan:
+    needs:
+      - build-and-publish-core-java
+    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
+    with:
+      multiproject: true
+    secrets:
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
+  publish-docker:
+    name: Build and publish docker image
+    needs:
+      - build-and-publish-core-java
+      - app-version
+      - changes
+    if: |
+      always() &&
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
+    uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
+    with:
+      docker-username: ${{ github.actor }}
+      version: ${{ needs.app-version.outputs.version }}-dev
+      versionNumber: ${{ needs.app-version.outputs.version }}
+      dockerContext: '.'
+      gradleProjectPath: 'app'
+      gradleParameters: '["clean", "build", "dockerPrepare"]'
+    secrets:
+      docker-password: ${{ secrets.GITHUB_TOKEN }}
+  trivy-docker-scan:
+    name: Scan Docker image for vulnerabilities
+    needs:
+      - publish-docker
+      - app-version
+    uses: th2-net/.github/.github/workflows/trivy-scan-github.yml@main
+    with:
+      image-path: ghcr.io/${{ github.repository }}:${{ needs.app-version.outputs.version }}-dev
+      target: 'os,library'
+      sensitivity: 'CRITICAL,HIGH,MEDIUM'
+  create-grpc-tag:
+    if: !cancelled() && needs.build-and-publish-grpc-java.result == 'success' && needs.build-and-publish-grpc-python.result == 'success'
+    name: Create and push gRPC tag
+    needs: [ grpc-version, build-and-publish-grpc-java, build-and-publish-grpc-python ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.grpc-version.outputs.version }}-grpc-dev
+  create-app-tag:
+    if: !cancelled() && needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success'
+    name: Create and push app tag
+    needs: [ app-version, publish-docker, build-and-publish-core-java ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.app-version.outputs.version }}-dev
