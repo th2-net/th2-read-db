@@ -81,6 +81,8 @@ jobs:
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
+    secrets:
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   publish-docker:
     name: Build and publish docker image
     if: |
