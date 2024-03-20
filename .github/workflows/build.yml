@@ -49,6 +49,7 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   build-and-publish-grpc-python:
     name: Build and publish Python distributions to PyPI
     needs:
@@ -75,6 +76,7 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+      nvd-api-key: ${{ secrets.NVD_APIKEY }}
   owasp-scan:
     needs:
       - build-and-publish-core-java
