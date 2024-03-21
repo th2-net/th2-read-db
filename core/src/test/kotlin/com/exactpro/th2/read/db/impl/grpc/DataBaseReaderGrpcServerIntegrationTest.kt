@@ -58,13 +58,16 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyBlocking
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
 import strikt.api.expectThat
@@ -82,6 +85,9 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -205,11 +211,187 @@ class DataBaseReaderGrpcServerIntegrationTest {
             verifyNoInteractions(genericUpdateListener)
             verifyNoInteractions(messageLoader)
 
-            val executionIds = hashSetOf<Long>()
-            genericRowListener.assertCaptured(expectedData).also(executionIds::add)
-            responses.assert(expectedData).also(executionIds::add)
-            onEvent.assertCaptured(cfg, request, 1_000).also(executionIds::add)
-            assertEquals(1, executionIds.size, "execution ids mismatch $executionIds")
+            val executionId = onEvent.assertCaptured(cfg, request, 1_000)
+            genericRowListener.assertCaptured(expectedData, executionId)
+            responses.assert(expectedData, executionId)
+        }
+    }
+
+    @Test
+    fun `cancel execute gRPC request test`() {
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
+        val onEvent = mock<OnEvent> { }
+
+        val sourceId = "persons"
+        val queryId = "select"
+        val cfg = DataBaseReaderConfiguration(
+            dataSources = mapOf(
+                DataSourceId(sourceId) to DataSourceConfiguration(
+                    mysql.jdbcUrl,
+                    mysql.username,
+                    mysql.password,
+                )
+            ),
+            queries = mapOf(
+                QueryId(queryId) to QueryConfiguration(
+                    "SELECT * FROM test_data.person WHERE \${fromId:integer} < id AND id < \${toId:integer}",
+                    mapOf(
+                        "fromId" to listOf(Int.MIN_VALUE.toString()),
+                        "toId" to listOf(Int.MAX_VALUE.toString())
+                    )
+                ),
+            )
+        )
+        val request = QueryRequest.newBuilder().apply {
+            sourceIdBuilder.setId(sourceId)
+            queryIdBuilder.setId(queryId)
+            parametersBuilder
+                .putValues("fromId", "10")
+                .putValues("toId", "20")
+        }.build()
+
+        runBlocking(Dispatchers.IO) {
+            val reader = DataBaseReader.createDataBaseReader(
+                cfg,
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+            )
+
+            val service = DataBaseReaderGrpcServer(
+                reader,
+                { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
+                { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
+                onEvent,
+            )
+
+            GrpcTestHolder(service).use { (stub) ->
+                val responses: List<QueryResponse> = withCancellation {
+                    stub.execute(request).asSequence().take(3).toList()
+                }
+
+                val expectedData = persons.asSequence().drop(10).take(9).toList()
+
+                verifyNoInteractions(genericUpdateListener)
+                verifyNoInteractions(messageLoader)
+
+                val executionId = onEvent.assertCaptured(cfg, request, 1_000)
+                genericRowListener.assertCaptured(expectedData, executionId)
+                responses.assert(expectedData.subList(0, 3), executionId)
+            }
+        }
+    }
+
+    @Test
+    fun `execute gRPC request (slow consumer) test`() {
+        val genericUpdateListener = mock<UpdateListener> { }
+        val genericRowListener = mock<RowListener> { }
+        val messageLoader = mock<MessageLoader> { }
+        val onEvent = mock<OnEvent> { }
+
+        val sourceId = "persons"
+        val queryId = "select"
+        val cfg = DataBaseReaderConfiguration(
+            dataSources = mapOf(
+                DataSourceId(sourceId) to DataSourceConfiguration(
+                    mysql.jdbcUrl,
+                    mysql.username,
+                    mysql.password,
+                )
+            ),
+            queries = mapOf(
+                QueryId(queryId) to QueryConfiguration(
+                    "SELECT * FROM test_data.person WHERE \${fromId:integer} < id AND id < \${toId:integer}",
+                    mapOf(
+                        "fromId" to listOf(Int.MIN_VALUE.toString()),
+                        "toId" to listOf(Int.MAX_VALUE.toString())
+                    )
+                ),
+            )
+        )
+        val request = QueryRequest.newBuilder().apply {
+            sourceIdBuilder.setId(sourceId)
+            queryIdBuilder.setId(queryId)
+            parametersBuilder
+                .putValues("fromId", "10")
+                .putValues("toId", "20")
+        }.build()
+
+        runBlocking(Dispatchers.IO) {
+            val reader = DataBaseReader.createDataBaseReader(
+                cfg,
+                this,
+                genericUpdateListener,
+                genericRowListener,
+                messageLoader,
+            )
+
+            val service = DataBaseReaderGrpcServer(
+                reader,
+                { cfg.dataSources[it] ?: error("'$it' data source isn't found in custom config") },
+                { cfg.queries[it] ?: error("'$it' query isn't found in custom config") },
+                onEvent,
+            )
+
+            val expectedData = persons.asSequence().drop(10).take(9).toList()
+            val responses = mutableListOf<QueryResponse>()
+            GrpcTestHolder(service).use { (stub) ->
+                withCancellation {
+                    val iterator: Iterator<QueryResponse> = stub.execute(request)
+                    // Grpc listener executes the checks sequentially if previous is false
+                    //  1) is isReady flag on gRPC observer true
+                    //  2) is OnReady call back called on gRPC observer. This check is blocking
+                    // In the initial state OnReady is called and isReady is set true
+                    // Iterations:
+                    //  1) check isReady, send message
+                    //  2) check isReady and OnReady, send message
+                    //  3) check isReady and OnReady, block
+                    // Operation sequence: send, (send, receive)
+                    verifyBlocking(genericRowListener,  timeout(1_000).times(2)) {
+                        onRow(any(), any())
+                    }
+                    repeat(expectedData.size) { index ->
+                        // minimal value is 2 because gRPC Listener allow to process first two messages without blocking.
+                        var expectRows = max(2, index + 1)
+                        verifyBlocking(
+                            genericRowListener,
+                            timeout(100).times(expectRows)
+                                .description("Check listener before iterator hasNext call for $index person")
+                        ) { onRow(any(), any()) }
+                        assertTrue(iterator.hasNext(), "Check next gRPC response for $index person")
+                        responses.add(iterator.next())
+
+                        // Client requests the next message after getting current.
+                        // minimal value is 2 because gRPC Listener allow to process first two messages without blocking.
+                        expectRows = max(2, index + 2)
+                        verifyBlocking(
+                            genericRowListener,
+
+                            timeout(100).times(min(expectRows, expectedData.size))
+                                .description("Check listener after iterator hasNext call for $index person")
+                        ) { onRow(any(), any()) }
+
+                        if (expectRows < expectedData.size) { // some messages will be published
+                            verify(onEvent, never()).accept(any(), anyOrNull())
+                        } else if (expectRows > expectedData.size) { // all messages are already published
+                            verify(onEvent).accept(any(), anyOrNull())
+                        } else { // the last message is published on this iteration
+                            verify(onEvent, timeout(100)).accept(any(), anyOrNull())
+                        }
+                    }
+                    assertFalse(iterator.hasNext())
+                }
+            }
+
+            verifyNoInteractions(genericUpdateListener)
+            verifyNoInteractions(messageLoader)
+
+            val executionId = onEvent.assertCaptured(cfg, request)
+            genericRowListener.assertCaptured(expectedData, executionId)
+            responses.assert(expectedData, executionId)
         }
     }
 
@@ -219,7 +401,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         var lastTimestamp: Instant? = null
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> {
-            on { onRow(any(), any()) }.doAnswer {
+            onBlocking { onRow(any(), any()) }.doAnswer {
                 if (firstTimestamp == null) {
                     Instant.now().let {
                         firstTimestamp = it
@@ -298,12 +480,10 @@ class DataBaseReaderGrpcServerIntegrationTest {
             }
             assertTrue(Timestamps.comparator().compare(report.start, report.end) < 0)
 
-            genericRowListener.assertCaptured(expectedData).also { executionId ->
+            onEvent.assertCaptured(cfg, request, 1_000).also { executionId ->
                 assertEquals(report.executionId, executionId)
             }
-            onEvent.assertCaptured(cfg, request, 0).also { executionId ->
-                assertEquals(report.executionId, executionId)
-            }
+            genericRowListener.assertCaptured(expectedData, report.executionId)
         }
     }
 
@@ -372,17 +552,15 @@ class DataBaseReaderGrpcServerIntegrationTest {
             verifyNoInteractions(genericUpdateListener)
             verifyNoInteractions(messageLoader)
 
-            val executionIds = hashSetOf<Long>()
-            genericRowListener.assertCaptured(expectedData).also(executionIds::add)
-            responses.assert(expectedData).also(executionIds::add)
-            onEvent.assertCaptured(cfg, request, 1_000).also(executionIds::add)
-            assertEquals(1, executionIds.size, "execution ids mismatch $executionIds")
+            val executionId = onEvent.assertCaptured(cfg, request, 1_000)
+            genericRowListener.assertCaptured(expectedData, executionId)
+            responses.assert(expectedData, executionId)
         }
     }
 
-    private fun RowListener.assertCaptured(persons: List<Person>): Long {
+    private fun RowListener.assertCaptured(persons: List<Person>, executionId: Long) {
         val captor = argumentCaptor<TableRow>()
-        verify(this, times(persons.size)).onRow(any(), captor.capture())
+        verifyBlocking(this, times(persons.size)) { onRow(any(), captor.capture()) }
         verifyNoMoreInteractions(this)
 
         captor.allValues.map {
@@ -395,14 +573,12 @@ class DataBaseReaderGrpcServerIntegrationTest {
             expectThat(it).containsExactly(persons)
         }
 
-        val executionIds = captor.allValues.asSequence()
-            .map(TableRow::executionId)
-            .toSet()
-        assertEquals(1, executionIds.size)
-        return assertNotNull(executionIds.single())
+        captor.allValues.forEachIndexed { index, row ->
+            assertEquals(executionId, row.executionId, "execution id mismatch in $index element")
+        }
     }
 
-    private fun List<QueryResponse>.assert(persons: List<Person>): Long {
+    private fun List<QueryResponse>.assert(persons: List<Person>, executionId: Long) {
         map { response ->
             Person(
                 response.getRowOrThrow("name").toString(),
@@ -412,15 +588,12 @@ class DataBaseReaderGrpcServerIntegrationTest {
         }.also {
             expectThat(it).containsExactly(persons)
         }
-        val executionIds = asSequence()
-            .map(QueryResponse::getExecutionId)
-            .toSet()
-        assertEquals(1, executionIds.size)
-
-        return executionIds.single()
+        forEachIndexed { index, response ->
+            assertEquals(executionId, response.executionId, "execution id mismatch in $index element")
+        }
     }
 
-    private fun OnEvent.assertCaptured(cfg: DataBaseReaderConfiguration, request: QueryRequest, timeout: Long): Long {
+    private fun OnEvent.assertCaptured(cfg: DataBaseReaderConfiguration, request: QueryRequest, timeout: Long = 0): Long {
         val captor = argumentCaptor<Event> { }
         verify(this, timeout(timeout)).accept(captor.capture(), isNull())
 
@@ -439,6 +612,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
             }
 
             event.body.parseSingle<ExecuteBodyData>().executionId
+                .also { assertTrue(it > 0) }
         }
     }
 

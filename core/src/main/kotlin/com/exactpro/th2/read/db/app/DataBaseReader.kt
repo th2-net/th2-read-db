@@ -157,7 +157,7 @@ class DataBaseReader(
         LOGGER.info { "Reader closed" }
     }
 
-    private fun TableRow.transferTo(sourceId: DataSourceId, vararg listeners: RowListener) {
+    private suspend fun TableRow.transferTo(sourceId: DataSourceId, vararg listeners: RowListener) {
         listeners.forEach { listener ->
             runCatchingException { listener.onRow(sourceId, this) }.onFailure {
                 LOGGER.error(it) { "error during row processing by listener ${listener::class}" }

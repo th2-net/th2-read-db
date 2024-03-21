@@ -1,4 +1,4 @@
-# th2-read-db 0.8.0
+# th2-read-db 0.9.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -339,10 +339,25 @@ spec:
 
 ## Changes
 
+### 0.9.0
+
++ implemented gRPC backpressure for the `Execute` method
++ updated jdbc:
+  + mysql-connector-j:`8.3.0`
+  + ojdbc11:`23.3.0.23.09`
+  + postgresql:`42.7.3`
++ updated: 
+  + common:`5.10.0-dev`
+  + grpc-common:`4.4.0-dev`
+  + common-utils:`2.2.2-dev`
+  + common-utils:`2.2.2-dev`
+
 ### 0.8.0
 
 + implemented the `Load` gRPC method.
 + fixed the catching java Error such as OutOfMemoryError problem
++ updated bom:`4.6.0`
+  
 
 ### 0.7.0
 

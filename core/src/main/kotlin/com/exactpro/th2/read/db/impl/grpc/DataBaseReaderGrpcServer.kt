@@ -44,7 +44,11 @@ import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
 import com.google.protobuf.Message
 import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import mu.KotlinLogging
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -58,8 +62,8 @@ class DataBaseReaderGrpcServer(
     private val onEvent: OnEvent,
 ) : ReadDbGrpc.ReadDbImplBase() {
     override fun execute(request: QueryRequest, responseObserver: StreamObserver<QueryResponse>) {
-        execute("execute", request, responseObserver) { event, parentEventId, _ ->
-            GrpcExecuteListener(responseObserver, event) {
+        execute("execute", request, responseObserver) { event, parentEventId, executionId ->
+            GrpcExecuteListener(responseObserver, executionId, event) {
                 onEvent.accept(it, parentEventId)
             }
         }
@@ -155,8 +159,8 @@ class DataBaseReaderGrpcServer(
             event.bodyData(executeQueryRequest.toBody(executionId))
             app.executeQuery(
                 executeQueryRequest,
-                createListener(event, parentEventId, executionId),
-                ) { row ->
+                createListener(event, parentEventId, executionId)
+            ) { row ->
                 row.copy(associatedMessageType = associatedMessageType, executionId = executionId)
             }
         } catch (ex: Exception) {
@@ -168,31 +172,64 @@ class DataBaseReaderGrpcServer(
     }
 
     private class GrpcExecuteListener(
-        private val observer: StreamObserver<QueryResponse>,
+        streamObserver: StreamObserver<QueryResponse>,
+        private val executionId: Long,
         private val event: Event,
         private val onEvent: (Event) -> Unit,
     ) : ResultListener {
-        override fun onRow(sourceId: DataSourceId, row: TableRow) {
-            requireNotNull(row.executionId) {
-                "'Execution id' is null for row: $row"
+        private val channel = Channel<Unit>(1)
+        private val observer = streamObserver as ServerCallStreamObserver<QueryResponse>
+
+        init {
+            observer.setOnReadyHandler {
+                channel.trySend(Unit)
             }
-            observer.onNext(
-                QueryResponse.newBuilder()
-                    .putRows(row)
-                    .setExecutionId(row.executionId)
-                    .build()
-            )
+            observer.setOnCancelHandler {
+                LOGGER.warn { "gRPC request is canceled for '$executionId' execution" }
+                channel.close()
+            }
+        }
+
+        override suspend fun onRow(sourceId: DataSourceId, row: TableRow) {
+            check(executionId == row.executionId) {
+                "'Execution id' isn't equal to '$executionId', row: $row"
+            }
+            try {
+                if (observer.isCancelled) {
+                    return
+                }
+                if (!observer.isReady) {
+                    channel.receive()
+                }
+
+                observer.onNext(
+                    QueryResponse.newBuilder()
+                        .putRows(row)
+                        .setExecutionId(row.executionId)
+                        .build()
+                )
+            } catch (e: RuntimeException) {
+                if (e is ClosedReceiveChannelException || e is StatusRuntimeException) {
+                    LOGGER.error(e) { "Couldn't send next gRPC message by gRPC connection problem for '$executionId' execution" }
+                } else {
+                    throw e
+                }
+            }
         }
 
         override fun onError(error: Throwable) {
-            observer.onError(error)
+            if (!observer.isCancelled) {
+                observer.onError(error)
+            }
             event.endTimestamp()
                 .exception(error, true)
                 .also(onEvent)
         }
 
         override fun onComplete() {
-            observer.onCompleted()
+            if (!observer.isCancelled) {
+                observer.onCompleted()
+            }
             event.endTimestamp()
                 .also(onEvent)
         }
@@ -206,7 +243,7 @@ class DataBaseReaderGrpcServer(
     ) : ResultListener {
         private val counter = AtomicLong()
 
-        override fun onRow(sourceId: DataSourceId, row: TableRow) {
+        override suspend fun onRow(sourceId: DataSourceId, row: TableRow) {
             check(report.executionId == row.executionId) {
                 "'Execution id' isn't equal to '${report.executionId}', row: $row"
             }
