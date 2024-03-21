@@ -374,11 +374,11 @@ class DataBaseReaderGrpcServerIntegrationTest {
                                 .description("Check listener after iterator hasNext call for $index person")
                         ) { onRow(any(), any()) }
 
-                        if (expectRows < expectedData.size) {
+                        if (expectRows < expectedData.size) { // some messages will be published
                             verify(onEvent, never()).accept(any(), anyOrNull())
-                        } else if (expectRows > expectedData.size) {
+                        } else if (expectRows > expectedData.size) { // all messages are already published
                             verify(onEvent).accept(any(), anyOrNull())
-                        } else {
+                        } else { // the last message is published on this iteration
                             verify(onEvent, timeout(100)).accept(any(), anyOrNull())
                         }
                     }

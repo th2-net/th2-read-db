@@ -177,12 +177,12 @@ class DataBaseReaderGrpcServer(
         private val event: Event,
         private val onEvent: (Event) -> Unit,
     ) : ResultListener {
-        private val channel = Channel<Any>(1)
+        private val channel = Channel<Unit>(1)
         private val observer = streamObserver as ServerCallStreamObserver<QueryResponse>
 
         init {
             observer.setOnReadyHandler {
-                channel.trySend(0)
+                channel.trySend(Unit)
             }
             observer.setOnCancelHandler {
                 LOGGER.warn { "gRPC request is canceled for '$executionId' execution" }
