@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,5 +22,5 @@ interface ResultListener : RowListener {
 }
 
 fun interface RowListener {
-    fun onRow(sourceId: DataSourceId, row: TableRow)
+    suspend fun onRow(sourceId: DataSourceId, row: TableRow)
 }

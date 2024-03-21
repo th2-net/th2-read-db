@@ -47,6 +47,8 @@ import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import mu.KotlinLogging
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -176,36 +178,52 @@ class DataBaseReaderGrpcServer(
         private val onEvent: (Event) -> Unit,
     ) : ResultListener {
         private val skipped = AtomicLong()
+        private val channel = Channel<Any>(1)
         private val observer = streamObserver as ServerCallStreamObserver<QueryResponse>
 
-        override fun onRow(sourceId: DataSourceId, row: TableRow) {
+        init {
+            observer.setOnReadyHandler {
+                channel.trySend(0)
+            }
+            observer.setOnCancelHandler {
+                LOGGER.warn { "gRPC request is canceled for '$executionId' execution" }
+                channel.close()
+            }
+        }
+
+        override suspend fun onRow(sourceId: DataSourceId, row: TableRow) {
             check(executionId == row.executionId) {
                 "'Execution id' isn't equal to '$executionId', row: $row"
             }
-
-            while (!observer.isReady) {
+            try {
                 if (observer.isCancelled) {
                     skipped.incrementAndGet()
                     return
                 }
-                Thread.yield()
-            }
+                if (!observer.isReady) {
+                    channel.receive()
+                }
 
-            try {
                 observer.onNext(
                     QueryResponse.newBuilder()
                         .putRows(row)
                         .setExecutionId(row.executionId)
                         .build()
                 )
-            } catch (e: StatusRuntimeException) {
-                LOGGER.error(e) { "Couldn't send next gRPC message for '$executionId' execution" }
+            } catch (e: RuntimeException) {
                 skipped.incrementAndGet()
+                if (e is ClosedReceiveChannelException || e is StatusRuntimeException) {
+                    LOGGER.error(e) { "Couldn't send next gRPC message by gRPC connection problem for '$executionId' execution" }
+                } else {
+                    throw e
+                }
             }
         }
 
         override fun onError(error: Throwable) {
-            observer.onError(error)
+            if (!observer.isCancelled) {
+                observer.onError(error)
+            }
             event.endTimestamp()
                 .exception(error, true)
                 .also(onEvent)
@@ -213,7 +231,9 @@ class DataBaseReaderGrpcServer(
         }
 
         override fun onComplete() {
-            observer.onCompleted()
+            if (!observer.isCancelled) {
+                observer.onCompleted()
+            }
             event.endTimestamp()
                 .also(onEvent)
             logSkipped()
@@ -221,7 +241,7 @@ class DataBaseReaderGrpcServer(
 
         private fun logSkipped() {
             if (skipped.get() > 0) {
-                LOGGER.warn { "gRPC consumer doesn't receives ${skipped.get()} rows for '$executionId' execution" }
+                LOGGER.warn { "gRPC consumer didn't receive ${skipped.get()} rows for '$executionId' execution" }
             }
         }
     }
@@ -234,7 +254,7 @@ class DataBaseReaderGrpcServer(
     ) : ResultListener {
         private val counter = AtomicLong()
 
-        override fun onRow(sourceId: DataSourceId, row: TableRow) {
+        override suspend fun onRow(sourceId: DataSourceId, row: TableRow) {
             check(report.executionId == row.executionId) {
                 "'Execution id' isn't equal to '${report.executionId}', row: $row"
             }

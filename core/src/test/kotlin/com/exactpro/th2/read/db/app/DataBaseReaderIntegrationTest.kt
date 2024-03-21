@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -598,7 +598,7 @@ internal class DataBaseReaderIntegrationTest {
             assertNotNull(it[TH2_PULL_TASK_UPDATE_HASH_PROPERTY])
         }
     }
-    private fun RowListener.assertCaptured(persons: List<Person>, timeout: Long = 0) {
+    private suspend fun RowListener.assertCaptured(persons: List<Person>, timeout: Long = 0) {
         val captor = argumentCaptor<TableRow>()
         verify(this, timeout(timeout).times(persons.size)).onRow(any(), captor.capture())
         captor.allValues.map {

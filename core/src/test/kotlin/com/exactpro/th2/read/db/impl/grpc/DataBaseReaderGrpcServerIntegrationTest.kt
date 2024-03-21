@@ -67,6 +67,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.timeout
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyBlocking
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
 import strikt.api.expectThat
@@ -84,6 +85,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -339,15 +341,38 @@ class DataBaseReaderGrpcServerIntegrationTest {
             GrpcTestHolder(service).use { (stub) ->
                 withCancellation {
                     val iterator: Iterator<QueryResponse> = stub.execute(request)
-                    verify(genericRowListener, timeout(500).times(1)).onRow(any(), any())
+                    // Grpc listener executes the checks sequentially if previous is false
+                    //  1) is isReady flag on gRPC observer true
+                    //  2) is OnReady call back called on gRPC observer. This check is blocking
+                    // In the initial state OnReady is called and isReady is set true
+                    // Iterations:
+                    //  1) check isReady, send message
+                    //  2) check isReady and OnReady, send message
+                    //  3) check isReady and OnReady, block
+                    // Operation sequence: send, (send, receive)
+                    verifyBlocking(genericRowListener,  timeout(1_000).times(2)) {
+                        onRow(any(), any())
+                    }
                     repeat(expectedData.size) { index ->
-                        verify(genericRowListener, timeout(100).times(index + 1)).onRow(any(), any())
-
-                        assertTrue(iterator.hasNext(), "Check next gRPC response on $index person")
+                        // minimal value is 2 because gRPC Listener allow to process first two messages without blocking.
+                        var expectRows = max(2, index + 1)
+                        verifyBlocking(
+                            genericRowListener,
+                            timeout(100).times(expectRows)
+                                .description("Check listener before iterator hasNext call for $index person")
+                        ) { onRow(any(), any()) }
+                        assertTrue(iterator.hasNext(), "Check next gRPC response for $index person")
                         responses.add(iterator.next())
 
-                        val expectRows = index + 2
-                        verify(genericRowListener, timeout(100).times(min(expectRows, expectedData.size))).onRow(any(), any())
+                        // Client requests the next message after getting current.
+                        // minimal value is 2 because gRPC Listener allow to process first two messages without blocking.
+                        expectRows = max(2, index + 2)
+                        verifyBlocking(
+                            genericRowListener,
+
+                            timeout(100).times(min(expectRows, expectedData.size))
+                                .description("Check listener after iterator hasNext call for $index person")
+                        ) { onRow(any(), any()) }
 
                         if (expectRows < expectedData.size) {
                             verify(onEvent, never()).accept(any(), anyOrNull())
@@ -376,7 +401,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         var lastTimestamp: Instant? = null
         val genericUpdateListener = mock<UpdateListener> { }
         val genericRowListener = mock<RowListener> {
-            on { onRow(any(), any()) }.doAnswer {
+            onBlocking { onRow(any(), any()) }.doAnswer {
                 if (firstTimestamp == null) {
                     Instant.now().let {
                         firstTimestamp = it
@@ -535,7 +560,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
     private fun RowListener.assertCaptured(persons: List<Person>, executionId: Long) {
         val captor = argumentCaptor<TableRow>()
-        verify(this, times(persons.size)).onRow(any(), captor.capture())
+        verifyBlocking(this, times(persons.size)) { onRow(any(), captor.capture()) }
         verifyNoMoreInteractions(this)
 
         captor.allValues.map {
