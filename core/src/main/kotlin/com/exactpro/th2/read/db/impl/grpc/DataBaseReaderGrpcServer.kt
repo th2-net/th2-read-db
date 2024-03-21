@@ -177,7 +177,6 @@ class DataBaseReaderGrpcServer(
         private val event: Event,
         private val onEvent: (Event) -> Unit,
     ) : ResultListener {
-        private val skipped = AtomicLong()
         private val channel = Channel<Any>(1)
         private val observer = streamObserver as ServerCallStreamObserver<QueryResponse>
 
@@ -197,7 +196,6 @@ class DataBaseReaderGrpcServer(
             }
             try {
                 if (observer.isCancelled) {
-                    skipped.incrementAndGet()
                     return
                 }
                 if (!observer.isReady) {
@@ -211,7 +209,6 @@ class DataBaseReaderGrpcServer(
                         .build()
                 )
             } catch (e: RuntimeException) {
-                skipped.incrementAndGet()
                 if (e is ClosedReceiveChannelException || e is StatusRuntimeException) {
                     LOGGER.error(e) { "Couldn't send next gRPC message by gRPC connection problem for '$executionId' execution" }
                 } else {
@@ -227,7 +224,6 @@ class DataBaseReaderGrpcServer(
             event.endTimestamp()
                 .exception(error, true)
                 .also(onEvent)
-            logSkipped()
         }
 
         override fun onComplete() {
@@ -236,13 +232,6 @@ class DataBaseReaderGrpcServer(
             }
             event.endTimestamp()
                 .also(onEvent)
-            logSkipped()
-        }
-
-        private fun logSkipped() {
-            if (skipped.get() > 0) {
-                LOGGER.warn { "gRPC consumer didn't receive ${skipped.get()} rows for '$executionId' execution" }
-            }
         }
     }
 
