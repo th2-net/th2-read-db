@@ -50,6 +50,7 @@ dependencies {
     testImplementation("io.grpc:grpc-inprocess")
 
     testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
+    testImplementation("org.awaitility:awaitility:4.2.1")
 
     testRuntimeOnly("com.mysql:mysql-connector-j:8.3.0") {
         because("mysql support")

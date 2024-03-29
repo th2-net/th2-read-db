@@ -24,6 +24,7 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.TableRow
+import com.exactpro.th2.read.db.core.ValueTransformer
 import com.exactpro.th2.read.db.core.exception.QueryExecutionException
 import com.exactpro.th2.read.db.core.get
 import com.exactpro.th2.read.db.core.util.getColumnValue
@@ -34,17 +35,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import mu.KotlinLogging
-import java.sql.Clob
 import java.sql.Connection
-import java.sql.Date
 import java.sql.ResultSet
-import java.sql.Time
-import java.sql.Timestamp
 import javax.sql.DataSource
 
 class DataBaseServiceImpl(
     private val dataSourceProvider: DataSourceProvider,
     private val queriesProvider: QueryProvider,
+    private val valueTransformer: ValueTransformer,
 ) : DataBaseService {
     override fun executeQuery(
         dataSourceId: DataSourceId,
@@ -132,6 +130,11 @@ class DataBaseServiceImpl(
         executeQuery()
     }
 
+    private fun ResultSet.transform(
+        columns: Collection<String>,
+        associatedMessageType: String?,
+    ): TableRow = TableRow(columns.associateWith { valueTransformer.transform(this.getColumnValue(it)) }, associatedMessageType)
+
     companion object {
         private val LOGGER = KotlinLogging.logger { }
     }
@@ -139,19 +142,4 @@ class DataBaseServiceImpl(
 
 private fun ResultSet.extractColumns(): List<String> = metaData.run {
     (1..columnCount).map { getColumnLabel(it) }
-}
-
-private fun ResultSet.transform(
-    columns: Collection<String>,
-    associatedMessageType: String?,
-): TableRow = TableRow(columns.associateWith(this::getColumnValue.asRegularValues()), associatedMessageType)
-
-private fun ((String) -> Any?).asRegularValues(): (String) -> Any? = {
-    when (val value = this(it)) {
-        is Date -> value.toLocalDate()
-        is Time -> value.toLocalTime()
-        is Timestamp -> value.toInstant()
-        is Clob -> value.characterStream.readText()
-        else -> value
-    }
 }
