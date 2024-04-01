@@ -113,9 +113,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
-    if: needs.build-and-publish-core-java.result == 'success' && !cancelled()
-    needs:
-      - build-and-publish-core-java
+    if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
