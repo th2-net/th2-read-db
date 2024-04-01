@@ -206,8 +206,7 @@ internal class FullReadDbOracleIntegrationTest {
                     "maxDelayMillis": 1,
                     "maxBatchSize": 1
                 },
-                "useTransport": true,
-                "useJdbcValueFormat": true
+                "useTransport": true
             }
             """.trimIndent()
     )
