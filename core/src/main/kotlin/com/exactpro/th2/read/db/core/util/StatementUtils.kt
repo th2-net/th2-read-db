@@ -71,8 +71,11 @@ private fun PreparedStatement.setManual(paramIndex: Int, value: String?, type: S
 }
 
 private fun String.toTimestamp(): Timestamp {
-    return runCatchingException { Timestamp.from(Instant.parse(this)) }
-        .getOrElse { Timestamp.valueOf(this) }
+    return if (this.contains("T")) {
+        Timestamp.from(Instant.parse(this))
+    } else {
+        Timestamp.valueOf(this)
+    }
 }
 
 private fun String.toDate(): Date = Date.valueOf(this)
