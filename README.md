@@ -339,6 +339,10 @@ spec:
 
 ## Changes
 
+### 0.9.1
+
++ fixed the pull continuation failure when column with oracle DATE type is used for update query. 
+
 ### 0.9.0
 
 + implemented gRPC backpressure for the `Execute` method
