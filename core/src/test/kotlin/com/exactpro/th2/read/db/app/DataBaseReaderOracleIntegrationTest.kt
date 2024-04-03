@@ -16,11 +16,11 @@
 
 package com.exactpro.th2.read.db.app
 
+import com.exactpro.th2.read.db.ORACLE_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.DELETE
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.INSERT
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.UPDATE
-import com.exactpro.th2.read.db.containers.OracleContainer
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
@@ -52,6 +52,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.testcontainers.containers.OracleContainer
+import org.testcontainers.utility.DockerImageName
 import java.io.ByteArrayInputStream
 import java.sql.Connection
 import java.sql.Date
@@ -65,7 +67,7 @@ import java.time.temporal.ChronoUnit
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderOracleIntegrationTest {
-    private val oracle = OracleContainer()
+    private val oracle = OracleContainer(DockerImageName.parse(ORACLE_DOCKER_IMAGE))
     private lateinit var redoFiles: List<String>
     private val persons = (1..15).map {
         Person(it, "$TABLE_NAME$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-init-data-$it".toByteArray())

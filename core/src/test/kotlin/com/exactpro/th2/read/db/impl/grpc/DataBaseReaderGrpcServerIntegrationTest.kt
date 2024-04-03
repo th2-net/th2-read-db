@@ -22,10 +22,10 @@ import com.exactpro.th2.common.grpc.EventStatus
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
 import com.exactpro.th2.common.utils.toInstant
+import com.exactpro.th2.read.db.MYSQL_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.app.DataBaseReader
 import com.exactpro.th2.read.db.app.DataBaseReaderConfiguration
-import com.exactpro.th2.read.db.containers.MySqlContainer
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.MessageLoader
@@ -70,6 +70,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyBlocking
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
+import org.testcontainers.containers.MySQLContainer
+import org.testcontainers.utility.DockerImageName
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
@@ -101,7 +103,7 @@ class DataBaseReaderGrpcServerIntegrationTest {
         id = "test-id"
         startTimestamp = Instant.now().toTimestamp()
     }.build()
-    private val mysql = MySqlContainer()
+    private val mysql = MySQLContainer(DockerImageName.parse(MYSQL_DOCKER_IMAGE))
     private val persons = (1..30).map {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
     }

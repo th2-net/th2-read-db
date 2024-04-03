@@ -21,6 +21,11 @@ import java.net.URI
 import java.sql.Connection
 import java.util.ServiceLoader.load
 
+/**
+ * This method transforms an instance of JDBC class to general th2 string format.
+ * Some vendor's JDBC classes use connection / session parameters (for example time zone of db or session)
+ *  for transformation their instances to general java classes.
+ */
 typealias ToNullableStringTransformer = (Any?, Connection) -> String?
 private typealias ToStringTransformer = (Any, Connection) -> String
 

@@ -16,8 +16,8 @@
 
 package com.exactpro.th2.read.db.app
 
+import com.exactpro.th2.read.db.MYSQL_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
-import com.exactpro.th2.read.db.containers.MySqlContainer
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
@@ -42,7 +42,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -65,6 +64,8 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.testcontainers.containers.MySQLContainer
+import org.testcontainers.utility.DockerImageName
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -82,8 +83,7 @@ import java.time.temporal.ChronoUnit
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderIntegrationTest {
-    private val connection = mock<Connection> { }
-    private val mysql = MySqlContainer()
+    private val mysql = MySQLContainer(DockerImageName.parse(MYSQL_DOCKER_IMAGE))
     private val persons = (1..30).map {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
     }
@@ -127,11 +127,6 @@ internal class DataBaseReaderIntegrationTest {
             dropTable()
             initTestData()
         }
-    }
-
-    @AfterEach
-    fun afterEach() {
-        verifyNoInteractions(connection)
     }
 
     @ParameterizedTest
@@ -621,9 +616,7 @@ internal class DataBaseReaderIntegrationTest {
         }
     }
 
-    private fun execute(action: Connection.() -> Unit) {
-        mysql.createConnection("").use { it.action() }
-    }
+    private fun <T> execute(action: Connection.() -> T): T = mysql.createConnection("").use { it.action() }
 
     private fun Connection.initTestData() {
         createStatement()
@@ -676,11 +669,13 @@ internal class DataBaseReaderIntegrationTest {
     }
 
     private fun Person.toTableRow(id: Int): TableRow = TableRow(
-        mapOf(
-            "id" to DEFAULT_TRANSFORM(id, connection),
-            "name" to name,
-            "birthday" to DEFAULT_TRANSFORM(birthday, connection)
-        )
+        execute {
+            mapOf(
+                "id" to DEFAULT_TRANSFORM(id, this),
+                "name" to name,
+                "birthday" to DEFAULT_TRANSFORM(birthday, this)
+            )
+        }
     )
 
     companion object {

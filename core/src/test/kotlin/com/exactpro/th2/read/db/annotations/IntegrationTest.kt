@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.containers
+package com.exactpro.th2.read.db.annotations
 
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.utility.DockerImageName
+import org.junit.jupiter.api.Tag
 
-class MySqlContainer : MySQLContainer<MySqlContainer>(DockerImageName.parse("mysql:5.7.34"))
+@Tag("integration-test")
+annotation class IntegrationTest

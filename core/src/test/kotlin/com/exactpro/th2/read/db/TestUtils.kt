@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
+ * Copyright 2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.annotations
+package com.exactpro.th2.read.db
 
-import org.junit.jupiter.api.Tag
-
-@Tag("integration-test")
-annotation class IntegrationTest
+const val MYSQL_DOCKER_IMAGE = "mysql:5.7.34"
+const val ORACLE_DOCKER_IMAGE = "gvenzl/oracle-xe:21-slim-faststart"

@@ -37,7 +37,6 @@ dependencies {
 
     testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
     testImplementation("org.awaitility:awaitility:4.2.1")
-    testImplementation(testFixtures(project(":read-db-core")))
     testImplementation(project(":grpc-read-db"))
 
     testImplementation("io.github.microutils:kotlin-logging:3.0.5")
