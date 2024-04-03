@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin)
-    id("java-library")
-    id("maven-publish")
+    `java-library`
+    `maven-publish`
 }
 
 kotlin {
