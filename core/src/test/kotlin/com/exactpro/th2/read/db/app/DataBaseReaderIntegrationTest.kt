@@ -42,6 +42,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -81,6 +82,7 @@ import java.time.temporal.ChronoUnit
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderIntegrationTest {
+    private val connection = mock<Connection> { }
     private val mysql = MySqlContainer()
     private val persons = (1..30).map {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
@@ -125,6 +127,11 @@ internal class DataBaseReaderIntegrationTest {
             dropTable()
             initTestData()
         }
+    }
+
+    @AfterEach
+    fun afterEach() {
+        verifyNoInteractions(connection)
     }
 
     @ParameterizedTest
@@ -670,9 +677,9 @@ internal class DataBaseReaderIntegrationTest {
 
     private fun Person.toTableRow(id: Int): TableRow = TableRow(
         mapOf(
-            "id" to DEFAULT_TRANSFORM(id),
+            "id" to DEFAULT_TRANSFORM(id, connection),
             "name" to name,
-            "birthday" to DEFAULT_TRANSFORM(birthday)
+            "birthday" to DEFAULT_TRANSFORM(birthday, connection)
         )
     )
 

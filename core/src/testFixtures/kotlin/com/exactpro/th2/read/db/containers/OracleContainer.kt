@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.core
+package com.exactpro.th2.read.db.containers
 
-import java.sql.Connection
+import org.testcontainers.containers.OracleContainer
+import org.testcontainers.utility.DockerImageName.parse
 
-typealias ValueTransform = (Any, Connection) -> Any
-
-interface ValueTransformerFactory {
-    /**
-     * Holds database vendor of JDBC URI protocol
-     */
-    val dbVendor: String
-    val transformer: ValueTransform
-}
+class OracleContainer : OracleContainer(parse("gvenzl/oracle-xe:21-slim-faststart"))

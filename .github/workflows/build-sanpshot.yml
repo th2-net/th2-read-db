@@ -54,9 +54,19 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  build-and-publish-oracle-extension-java:
+    name: Build and publish Java oracle extension distributions
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
+    with:
+      projectPath: oracle
+      additionalTasks: '["publish"]'
+      release: false
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
-    needs:
-      - build-and-publish-core-java
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true

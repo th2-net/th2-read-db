@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,7 +140,6 @@ internal class DataBaseReaderOracleIntegrationTest {
                             "ALTER TABLE $TABLE_SPACE.$TABLE_NAME ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS"
                         ),
                         QueryId("start-log-miner") to QueryConfiguration(
-                            // FIXME: add timestamp limitation
                             "{CALL DBMS_LOGMNR.START_LOGMNR (OPTIONS => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG + DBMS_LOGMNR.COMMITTED_DATA_ONLY)}"
                         ),
                         QueryId("stop-log-miner") to QueryConfiguration(
@@ -234,13 +233,13 @@ internal class DataBaseReaderOracleIntegrationTest {
             checkNotNull(tableRow.columns["SCN"]) {
                 "'SCN' column in $index row"
             }
-            val rowId = checkNotNull(tableRow.columns["ROW_ID"]?.toString()) {
+            val rowId = checkNotNull(tableRow.columns["ROW_ID"]) {
                 "'ROW_ID' column in $index row"
             }
-            assertEquals(historyEntity.operation.name, tableRow.columns["OPERATION"]?.toString()) {
+            assertEquals(historyEntity.operation.name, tableRow.columns["OPERATION"]) {
                 "'OPERATION' column in $index row"
             }
-            val sql = checkNotNull(tableRow.columns["SQL_REDO"]?.toString()) {
+            val sql = checkNotNull(tableRow.columns["SQL_REDO"]) {
                 "'SQL_REDO' column in $index row"
             }
 

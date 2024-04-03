@@ -16,12 +16,16 @@
 
 package com.exactpro.th2.read.db.core.impl
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.of
 import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verifyNoInteractions
 import java.math.BigDecimal
+import java.sql.Connection
 import java.sql.Date
 import java.sql.Time
 import java.sql.Timestamp
@@ -33,11 +37,18 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 
 @TestInstance(PER_CLASS)
-class DefaultValueTransformerTest {
+class DefaultValueTransformTest {
+    private val connection = mock<Connection> {  }
+
+    @AfterEach
+    fun afterEach() {
+        verifyNoInteractions(connection)
+    }
+
     @ParameterizedTest
     @MethodSource("values")
     fun `transform test`(value: Any, expected: String) {
-        assertEquals(expected, DefaultValueTransformer.transform(value), "value: $value, class: ${value::class.java}")
+        assertEquals(expected, DefaultValueTransform(value, connection), "value: $value, class: ${value::class.java}")
     }
 
     private fun values() = listOf(

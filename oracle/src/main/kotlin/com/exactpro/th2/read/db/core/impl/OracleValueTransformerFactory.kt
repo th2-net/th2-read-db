@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.annotations
+package com.exactpro.th2.read.db.core.impl
 
-import org.junit.jupiter.api.Tag
+import com.exactpro.th2.read.db.core.ValueTransform
+import com.exactpro.th2.read.db.core.ValueTransformerFactory
+import com.google.auto.service.AutoService
 
-@Tag("integration-test")
-annotation class IntegrationTest
+@AutoService(ValueTransformerFactory::class)
+class OracleValueTransformerFactory: ValueTransformerFactory {
+    override val dbVendor: String = "oracle"
+    override val transformer: ValueTransform
+        get() = OracleValueTransform
+}

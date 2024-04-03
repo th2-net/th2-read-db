@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    id("java-test-fixtures")
     id("java-library")
     id("maven-publish")
 }
@@ -50,7 +51,6 @@ dependencies {
     testImplementation("io.grpc:grpc-inprocess")
 
     testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
-    testImplementation("org.awaitility:awaitility:4.2.1")
 
     testRuntimeOnly("com.mysql:mysql-connector-j:8.3.0") {
         because("mysql support")
@@ -58,6 +58,11 @@ dependencies {
     testRuntimeOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
         because("oracle support")
     }
+
+    testFixturesImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testFixturesImplementation(platform("org.testcontainers:testcontainers-bom:1.19.7"))
+    testFixturesImplementation("org.testcontainers:testcontainers")
+    testFixturesImplementation("org.testcontainers:oracle-xe")
 }
 
 tasks {

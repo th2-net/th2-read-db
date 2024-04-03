@@ -11,6 +11,12 @@ configurations.all {
 dependencies {
     implementation(project(":read-db-core"))
 
+    //region extensions
+    runtimeOnly(project("read-db-oracle-extension")) {
+        because("oracle support")
+    }
+    //endregion
+
     //region Drivers
     runtimeOnly("org.postgresql:postgresql:42.7.3") {
         because("prostresql support")

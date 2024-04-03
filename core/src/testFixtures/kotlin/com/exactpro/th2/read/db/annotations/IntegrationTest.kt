@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.containers
+package com.exactpro.th2.read.db.annotations
 
-import org.testcontainers.containers.OracleContainer
-import org.testcontainers.utility.DockerImageName
+import org.junit.jupiter.api.Tag
 
-class OracleContainer : OracleContainer(DockerImageName.parse("gvenzl/oracle-xe:21-slim-faststart"))
+@Tag("integration-test")
+annotation class IntegrationTest

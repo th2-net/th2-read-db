@@ -24,6 +24,7 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.TableRow
+import com.exactpro.th2.read.db.core.ToNullableStringTransformer
 import com.exactpro.th2.read.db.core.ValueTransformProvider
 import com.exactpro.th2.read.db.core.exception.QueryExecutionException
 import com.exactpro.th2.read.db.core.get
@@ -53,11 +54,11 @@ class DataBaseServiceImpl(
     ): Flow<TableRow> {
         LOGGER.info { "Executing query $queryId for $dataSourceId connection with $parameters parameters without default" }
         val dataSource: DataSource = dataSourceProvider[dataSourceId].dataSource
-        val transformValue: (Any?) -> String? = transformProvider[dataSourceId]
+        val transformValue: ToNullableStringTransformer = transformProvider[dataSourceId]
         val queryHolder: QueryHolder = queriesProvider[queryId]
         val beforeQueryHolders: List<QueryHolder> = before.map(queriesProvider::get)
         val afterQueryHolders: List<QueryHolder> = after.map(queriesProvider::get)
-        val connection = dataSource.connection
+        val connection: Connection = dataSource.connection
         val finalParameters = queryHolder.defaultParameters.toMutableMap().apply {
             putAll(parameters)
         }
@@ -86,7 +87,7 @@ class DataBaseServiceImpl(
                 if (columns == null) {
                     columns = resultSet.extractColumns()
                 }
-                emit(resultSet.transform(columns, associatedMessageType, transformValue))
+                emit(resultSet.transform(columns, associatedMessageType, transformValue, connection))
             }
         }.onCompletion { reason ->
             try {
@@ -144,8 +145,9 @@ private fun ResultSet.extractColumns(): List<String> = metaData.run {
 private fun ResultSet.transform(
     columns: Collection<String>,
     associatedMessageType: String?,
-    transformValue: (Any?) -> String?,
+    transform: ToNullableStringTransformer,
+    connection: Connection,
 ): TableRow = TableRow(
-    columns.associateWith { transformValue(getColumnValue(it)) },
+    columns.associateWith { transform(getColumnValue(it), connection) },
     associatedMessageType
 )

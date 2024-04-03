@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.core
+package com.exactpro.th2.read.db.core.impl
 
-interface ValueTransformer {
-    /**
-     * Tries to transform [Any] value to string
-     * @return [String] or origin [Any] value if the instance can't execute transformation
-     */
-    fun transform(value: Any): Any
+import com.exactpro.th2.read.db.core.ValueTransform
+import oracle.sql.TIMESTAMP
+import oracle.sql.TIMESTAMPLTZ
+import oracle.sql.TIMESTAMPTZ
+import java.sql.Connection
+
+object OracleValueTransform: ValueTransform {
+    override fun invoke(value: Any, connection: Connection): Any = when(value) {
+        is TIMESTAMP -> value.toLocalDateTime().toString()
+        is TIMESTAMPTZ -> value.toZonedDateTime().toInstant().toString()
+        is TIMESTAMPLTZ -> value.toLocalDateTime(connection).toString()
+        else -> value
+    }
 }
