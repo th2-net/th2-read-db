@@ -70,6 +70,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyBlocking
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
+import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
@@ -565,9 +566,9 @@ class DataBaseReaderGrpcServerIntegrationTest {
 
         captor.allValues.map {
             Person(
-                checkNotNull(it.columns["name"]).toString(),
-                (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                it.columns["data"] as ByteArray?,
+                checkNotNull(it.columns["name"]),
+                LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
+                it.columns["data"]?.let(Hex::decode),
             )
         }.also {
             expectThat(it).containsExactly(persons)

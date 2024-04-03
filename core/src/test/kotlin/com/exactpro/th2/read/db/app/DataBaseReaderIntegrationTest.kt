@@ -30,6 +30,7 @@ import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
+import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TRANSFORM
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
@@ -62,6 +63,7 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -586,9 +588,9 @@ internal class DataBaseReaderIntegrationTest {
         verify(this, timeout(timeout).times(persons.size)).onUpdate(any(), tableRawCaptor.capture(), propertiesCaptor.capture())
         tableRawCaptor.allValues.map {
             Person(
-                checkNotNull(it.columns["name"]).toString(),
-                (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                (checkNotNull(it.columns["data"]) as ByteArray),
+                checkNotNull(it.columns["name"]),
+                LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
+                Hex.decode(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -603,9 +605,9 @@ internal class DataBaseReaderIntegrationTest {
         verify(this, timeout(timeout).times(persons.size)).onRow(any(), captor.capture())
         captor.allValues.map {
             Person(
-                checkNotNull(it.columns["name"]).toString(),
-                (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                (checkNotNull(it.columns["data"]) as ByteArray),
+                checkNotNull(it.columns["name"]),
+                LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
+                Hex.decode(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -668,9 +670,9 @@ internal class DataBaseReaderIntegrationTest {
 
     private fun Person.toTableRow(id: Int): TableRow = TableRow(
         mapOf(
-            "id" to id,
+            "id" to DEFAULT_TRANSFORM(id),
             "name" to name,
-            "birthday" to birthday.toString()
+            "birthday" to DEFAULT_TRANSFORM(birthday)
         )
     )
 

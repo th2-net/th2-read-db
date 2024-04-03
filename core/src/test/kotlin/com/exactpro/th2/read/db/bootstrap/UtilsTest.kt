@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.exactpro.th2.read.db.bootstrap
 
 import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
 import com.exactpro.th2.read.db.core.TableRow
+import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TRANSFORM
 import com.google.protobuf.ByteString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -28,11 +29,11 @@ class UtilsTest {
     @Test
     fun `toCsvBody test`() {
         val tableRow = TableRow(linkedMapOf(
-            "test-double-column" to 0123.4560,
-            "test-float-column" to 0789.0120f,
-            "test-big-decimal-column" to BigDecimal("0345.6780"),
+            "test-double-column" to DEFAULT_TRANSFORM(0123.4560),
+            "test-float-column" to DEFAULT_TRANSFORM(0789.0120f),
+            "test-big-decimal-column" to DEFAULT_TRANSFORM(BigDecimal("0345.6780")),
             "test-string-column" to "abc",
-            "test-blob-column" to "blob".toByteArray(),
+            "test-blob-column" to DEFAULT_TRANSFORM("blob".toByteArray()),
             "test-null-column" to null,
         ))
 
