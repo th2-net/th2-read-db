@@ -23,33 +23,20 @@ import java.sql.Clob
 import java.sql.Date
 import java.sql.Time
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
 import java.time.temporal.Temporal
 
-class DefaultValueTransformer private constructor(): ValueTransformer {
+object DefaultValueTransformer: ValueTransformer {
     override fun transform(value: Any): Any = when(value) {
         is BigDecimal -> value.stripTrailingZeros().toPlainString()
         is Byte, is UByte, is Short, is UShort, is Int, is UInt, is Long, is ULong -> value.toString()
         is Double -> transform(value.toBigDecimal())
         is Float -> transform(value.toBigDecimal())
         is ByteArray -> hexDump(value)
-        is Date -> DATE_FORMATTER.get().format(value)
-        is Time -> TIME_FORMATTER.get().format(value)
+        is Date -> value.toLocalDate().toString()
+        is Time -> value.toLocalTime().toString()
         is Timestamp -> value.toInstant().toString()
         is Temporal -> value.toString()
         is Clob -> value.characterStream.readText()
         else -> value
-    }
-
-    companion object {
-        @JvmField
-        val INSTANCE: ValueTransformer = DefaultValueTransformer()
-
-        private val DATE_FORMATTER = ThreadLocal.withInitial {
-            SimpleDateFormat("yyyy-MM-dd")
-        }
-        private val TIME_FORMATTER = ThreadLocal.withInitial {
-            SimpleDateFormat("hh:mm:ss")
-        }
     }
 }

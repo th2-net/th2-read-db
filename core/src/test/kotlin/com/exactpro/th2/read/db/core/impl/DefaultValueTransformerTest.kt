@@ -16,7 +16,8 @@
 
 package com.exactpro.th2.read.db.core.impl
 
-import com.exactpro.th2.read.db.core.impl.DefaultValueTransformer.Companion.INSTANCE
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.of
 import org.junit.jupiter.params.provider.MethodSource
@@ -31,39 +32,37 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
 
+@TestInstance(PER_CLASS)
 class DefaultValueTransformerTest {
     @ParameterizedTest
     @MethodSource("values")
     fun `transform test`(value: Any, expected: String) {
-        assertEquals(expected, INSTANCE.transform(value), "value: $value, class: ${value::class.java}")
+        assertEquals(expected, DefaultValueTransformer.transform(value), "value: $value, class: ${value::class.java}")
     }
 
-    companion object {
-        @JvmStatic
-        fun values() = listOf(
-            of(BigDecimal("00123.45600"), "123.456"),
-            of((-128).toByte(), "-128"),
-            of(127.toByte(), "127"),
-            of(255.toUByte(), "255"),
-            of((-32768).toShort(), "-32768"),
-            of(32767.toShort(), "32767"),
-            of(65535.toUShort(), "65535"),
-            of(-2147483648, "-2147483648"),
-            of(2147483647, "2147483647"),
-            of(4294967295.toUInt(), "4294967295"),
-            of(-9223372036854775807L, "-9223372036854775807"),
-            of(9223372036854775807L, "9223372036854775807"),
-            of("18446744073709551615".toULong(), "18446744073709551615"),
-            of(Date.valueOf(LocalDate.parse("2024-04-03")), "2024-04-03"),
-            of(Time.valueOf(LocalTime.parse("01:02:03.123456789")), "01:02:03"),
-            LocalDateTime.parse("2024-04-03T01:02:03.123456789").run {
-                of(Timestamp.valueOf(this), this.atZone(ZoneId.systemDefault()).toInstant().toString())
-            },
-            of(LocalDate.parse("2024-04-03"), "2024-04-03"),
-            of(LocalTime.parse("01:02:03.123456789"), "01:02:03.123456789"),
-            of(LocalDateTime.parse("2024-04-03T01:02:03.123456789"), "2024-04-03T01:02:03.123456789"),
-            of(Instant.parse("2024-04-03T01:02:03.123456789Z"), "2024-04-03T01:02:03.123456789Z"),
-            of("clob".toByteArray(), "636c6f62")
-        )
-    }
+    private fun values() = listOf(
+        of(BigDecimal("00123.45600"), "123.456"),
+        of((-128).toByte(), "-128"),
+        of(127.toByte(), "127"),
+        of(255.toUByte(), "255"),
+        of((-32768).toShort(), "-32768"),
+        of(32767.toShort(), "32767"),
+        of(65535.toUShort(), "65535"),
+        of(-2147483648, "-2147483648"),
+        of(2147483647, "2147483647"),
+        of(4294967295.toUInt(), "4294967295"),
+        of(-9223372036854775807L, "-9223372036854775807"),
+        of(9223372036854775807L, "9223372036854775807"),
+        of("18446744073709551615".toULong(), "18446744073709551615"),
+        of(Date.valueOf(LocalDate.parse("2024-04-03")), "2024-04-03"),
+        of(Time.valueOf(LocalTime.parse("01:02:03.123456789")), "01:02:03"),
+        LocalDateTime.parse("2024-04-03T01:02:03.123456789").run {
+            of(Timestamp.valueOf(this), this.atZone(ZoneId.systemDefault()).toInstant().toString())
+        },
+        of(LocalDate.parse("2024-04-03"), "2024-04-03"),
+        of(LocalTime.parse("01:02:03.123456789"), "01:02:03.123456789"),
+        of(LocalDateTime.parse("2024-04-03T01:02:03.123456789"), "2024-04-03T01:02:03.123456789"),
+        of(Instant.parse("2024-04-03T01:02:03.123456789Z"), "2024-04-03T01:02:03.123456789Z"),
+        of("clob".toByteArray(), "636c6f62")
+    )
 }

@@ -16,20 +16,24 @@
 
 package com.exactpro.th2.read.db.core
 
-import com.exactpro.th2.read.db.core.impl.DefaultValueTransformer.Companion.INSTANCE
+import com.exactpro.th2.read.db.core.impl.DefaultValueTransformer
 import java.net.URI
 import java.util.ServiceLoader.load
 
+typealias Transformer = (Any) -> Any
+typealias ToStringTransformer = (Any) -> String
+
 class ValueTransformProvider private constructor(
-    private val transforms: Map<DataSourceId, (Any) -> String>
+    private val transforms: Map<DataSourceId, ToStringTransformer>
 ) {
     fun transformer(dataSourceId: DataSourceId): (Any?) -> String? {
-        val func: (Any) -> String = transforms[dataSourceId] ?: DEFAULT_TRANSFORM
+        val func: ToStringTransformer = transforms[dataSourceId] ?: DEFAULT_TRANSFORM
         return { source: Any? -> source?.let(func) }
     }
 
     companion object {
-        val DEFAULT_TRANSFORM: (Any) -> String = INSTANCE::transform.transformToString()
+        @JvmField
+        val DEFAULT_TRANSFORM: ToStringTransformer = DefaultValueTransformer::transform.transformToString()
 
         fun create(dataSources: Map<DataSourceId, DataSourceConfiguration>): ValueTransformProvider {
             val dbTypeToFactory = load(ValueTransformerFactory::class.java).associateBy(ValueTransformerFactory::dbType)
@@ -40,7 +44,7 @@ class ValueTransformProvider private constructor(
             )
         }
 
-        private infix fun ((Any) -> Any).orTransform(after: (Any) -> Any): (Any) -> Any {
+        private infix fun (Transformer).orTransform(after: Transformer): Transformer {
             return { source: Any ->
                 when (val result = this(source)) {
                     is String -> result
@@ -49,7 +53,7 @@ class ValueTransformProvider private constructor(
             }
         }
 
-        private fun ((Any) -> Any).transformToString(): (Any) -> String {
+        private fun (Transformer).transformToString(): ToStringTransformer {
             return { source: Any ->
                 when (val result = this(source)) {
                     is String -> result
@@ -58,10 +62,10 @@ class ValueTransformProvider private constructor(
             }
         }
 
-        private fun findTransform(url: String, dbTypeToFactory: Map<String, ValueTransformerFactory>): (Any) -> String {
+        private fun findTransform(url: String, dbTypeToFactory: Map<String, ValueTransformerFactory>): ToStringTransformer {
             val dbType = URI.create(url).schemeSpecificPart.split(":").first()
             return dbTypeToFactory[dbType]?.let {
-                (INSTANCE::transform orTransform it::transform).transformToString()
+                (DefaultValueTransformer::transform orTransform it::transform).transformToString()
             } ?: DEFAULT_TRANSFORM
         }
     }

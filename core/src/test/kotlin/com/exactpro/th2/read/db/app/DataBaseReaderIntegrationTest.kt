@@ -34,6 +34,7 @@ import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TR
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
+import io.netty.buffer.ByteBufUtil.decodeHexDump
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -63,7 +64,6 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
-import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -590,7 +590,7 @@ internal class DataBaseReaderIntegrationTest {
             Person(
                 checkNotNull(it.columns["name"]),
                 LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
-                Hex.decode(checkNotNull(it.columns["data"])),
+                decodeHexDump(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -607,7 +607,7 @@ internal class DataBaseReaderIntegrationTest {
             Person(
                 checkNotNull(it.columns["name"]),
                 LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
-                Hex.decode(checkNotNull(it.columns["data"])),
+                decodeHexDump(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
