@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.kapt)
     id("java-library")
     id("maven-publish")
 }
@@ -17,33 +17,33 @@ configurations.all {
 dependencies {
     implementation(project(":read-db-core"))
 
-    compileOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
+    compileOnly(libs.ojdbc11) {
         because("oracle support")
     }
 
     // Auto service
-    compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
-    kapt("com.google.auto.service:auto-service:1.1.1")
+    compileOnly(libs.auto.service.annotations)
+    kapt(libs.auto.service)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation(libs.junit.jupiter)
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+    testImplementation(libs.mockito.kotlin)
 
-    testImplementation(platform("org.testcontainers:testcontainers-bom:1.19.7"))
+    testImplementation(platform(libs.testcontainers.bom))
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:oracle-xe")
     testImplementation("io.grpc:grpc-testing")
     testImplementation("io.grpc:grpc-inprocess")
 
-    testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
-    testImplementation("org.awaitility:awaitility:4.2.1")
+    testImplementation(libs.th2.junit.jupiter.integration)
+    testImplementation(libs.awaitility)
     testImplementation(project(":grpc-read-db"))
 
-    testImplementation("io.github.microutils:kotlin-logging:3.0.5")
-    testImplementation("com.exactpro.th2:common-utils:2.2.2-dev")
-    testImplementation("com.exactpro.th2:lw-data-provider-utils:0.0.1-dev")
+    testImplementation(libs.kotlin.logging)
+    testImplementation(libs.th2.common.utils)
+    testImplementation(libs.th2.lw.data.provider.utils)
 
-    testImplementation("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
+    testImplementation(libs.ojdbc11) {
         because("oracle support")
     }
 }

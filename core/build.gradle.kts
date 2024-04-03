@@ -1,10 +1,8 @@
 plugins {
-    kotlin("jvm")
+    alias(libs.plugins.kotlin)
     id("java-library")
     id("maven-publish")
 }
-
-val coroutinesVersion by extra("1.7.3")
 
 kotlin {
     jvmToolchain(11)
@@ -18,43 +16,44 @@ configurations.all {
 dependencies {
     implementation(project(":grpc-read-db"))
 
-    implementation("com.exactpro.th2:common:5.10.0-dev")
-    implementation("com.exactpro.th2:common-utils:2.2.2-dev")
-    implementation("com.exactpro.th2:lw-data-provider-utils:0.0.1-dev")
+    implementation(libs.th2.common)
+    implementation(libs.th2.common.utils)
+    implementation(libs.th2.lw.data.provider.utils)
 
     implementation("org.slf4j:slf4j-api")
 
-    implementation("org.apache.commons:commons-dbcp2:2.9.0") {
+    implementation(libs.commons.dbcp2) {
         because("connection pool")
     }
     implementation("org.apache.commons:commons-text")
-    implementation("com.opencsv:opencsv:5.9") {
+    implementation(libs.opencsv) {
         because("publishes raw messages in csv format")
     }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-    implementation("io.github.microutils:kotlin-logging:3.0.5")
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlin.logging)
+    implementation(libs.kotlin.logging)
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation(libs.junit.jupiter)
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
-    testImplementation("io.strikt:strikt-core:0.34.1")
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.strikt.core)
 
-    testImplementation(platform("org.testcontainers:testcontainers-bom:1.19.7"))
+    testImplementation(platform(libs.testcontainers.bom))
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:mysql")
     testImplementation("org.testcontainers:oracle-xe")
     testImplementation("io.grpc:grpc-testing")
     testImplementation("io.grpc:grpc-inprocess")
 
-    testImplementation("com.exactpro.th2:junit-jupiter-integration:0.0.1")
+    testImplementation(libs.th2.junit.jupiter.integration)
 
-    testRuntimeOnly("com.mysql:mysql-connector-j:8.3.0") {
+    testRuntimeOnly(libs.mysql.connector.j) {
         because("mysql support")
     }
-    testRuntimeOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
+    testRuntimeOnly(libs.ojdbc11) {
         because("oracle support")
     }
 }

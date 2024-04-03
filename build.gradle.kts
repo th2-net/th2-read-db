@@ -1,11 +1,11 @@
 plugins {
-    id("com.exactpro.th2.gradle.base") version "0.0.4"
-    id("com.exactpro.th2.gradle.publish") version "0.0.4"
+    alias(libs.plugins.th2.base)
+    alias(libs.plugins.th2.publish)
 
-    kotlin("jvm") version "1.8.22" apply false
-    kotlin("kapt") version "1.8.22" apply false
-    id("com.exactpro.th2.gradle.grpc") version "0.0.4" apply false
-    id("com.exactpro.th2.gradle.component") version "0.0.4" apply false
+    alias(libs.plugins.kotlin) apply false
+    alias(libs.plugins.kapt) apply false
+    alias(libs.plugins.th2.grpc) apply false
+    alias(libs.plugins.th2.component) apply false
 }
 
 allprojects {
