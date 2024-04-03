@@ -12,7 +12,7 @@ dependencies {
     implementation(project(":read-db-core"))
 
     //region extensions
-    runtimeOnly(project("read-db-oracle-extension")) {
+    runtimeOnly(project(":read-db-oracle-extension")) {
         because("oracle support")
     }
     //endregion
