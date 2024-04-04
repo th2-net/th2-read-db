@@ -60,14 +60,8 @@ class ValueTransformProvider private constructor(
             }
         }
 
-        private fun (ValueTransform).transformToString(): ToStringTransformer {
-            return { source, connection ->
-                when (val result = this(source, connection)) {
-                    is String -> result
-                    else -> error("Value '$result' of type ${result::class.java} type can't be converted to String")
-                }
-            }
-        }
+        private fun (ValueTransform).transformToString(): ToStringTransformer =
+            { source, connection -> this(source, connection).toString() }
 
         private fun findTransform(url: String, dbTypeToFactory: Map<String, ValueTransformerFactory>): ToStringTransformer {
             val dbType = URI.create(url).schemeSpecificPart.split(":").first()
