@@ -28,10 +28,10 @@ import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
 import com.exactpro.th2.dataprovider.lw.grpc.MessageGroupResponse
 import com.exactpro.th2.dataprovider.lw.grpc.MessageGroupsSearchRequest
 import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
+import com.exactpro.th2.read.db.bootstrap.ResourceRegister
 import com.exactpro.th2.read.db.bootstrap.setupApp
 import com.exactpro.th2.read.db.grpc.DbPullRequest
 import com.exactpro.th2.read.db.grpc.ReadDbService
-import com.exactpro.th2.read.db.grpc.StopPullingRequest
 import com.exactpro.th2.test.annotations.CustomConfigProvider
 import com.exactpro.th2.test.annotations.Th2AppFactory
 import com.exactpro.th2.test.annotations.Th2IntegrationTest
@@ -161,21 +161,23 @@ internal class FullReadDbOracleIntegrationTest {
                 }
         }, MESSAGE_OUT_PIN)
 
-        setupApp(factory) { name, resource -> resourceCleaner.add(name, resource) }
+
+
         val readDb = test.grpcRouter.getService(ReadDbService::class.java)
+        ResourceRegister().use { register ->
+            setupApp(factory, register::add)
 
-        execute { insertData(listOf(Record(1, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
-        var dbPullResponse = readDb.startPulling(dbPullRequest)
-        await("first message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 1 }
-        readDb.stopPulling(StopPullingRequest.newBuilder().setId(dbPullResponse.id).build())
+            execute { insertData(listOf(Record(1, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
+            readDb.startPulling(dbPullRequest)
+            await("first message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 1 }
+        }
 
-        Thread.sleep(1)
-
-        execute { insertData(listOf(Record(2, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
-        dbPullResponse = readDb.startPulling(dbPullRequest)
-        await("second message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 2 }
-        readDb.stopPulling(StopPullingRequest.newBuilder().setId(dbPullResponse.id).build())
-
+        ResourceRegister().use { register ->
+            setupApp(factory, register::add)
+            execute { insertData(listOf(Record(2, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
+            readDb.startPulling(dbPullRequest)
+            await("second message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 2 }
+        }
     }
 
     @Suppress("unused")
@@ -264,7 +266,7 @@ internal class FullReadDbOracleIntegrationTest {
                          RAISE;
                       END IF;
                 END;
-            """.trimIndent()
+                """.trimIndent()
             )
         LOGGER.info { "table dropped" }
     }
