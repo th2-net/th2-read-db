@@ -1,4 +1,4 @@
-# th2-read-db 0.9.0
+# th2-read-db 0.9.1
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
