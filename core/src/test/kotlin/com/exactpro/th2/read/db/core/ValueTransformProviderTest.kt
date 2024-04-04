@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.core.impl
+package com.exactpro.th2.read.db.core
 
+import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TRANSFORM
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
@@ -37,7 +38,8 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 
 @TestInstance(PER_CLASS)
-class DefaultValueTransformTest {
+class ValueTransformProviderTest {
+
     private val connection = mock<Connection> {  }
 
     @AfterEach
@@ -47,12 +49,12 @@ class DefaultValueTransformTest {
 
     @ParameterizedTest
     @MethodSource("values")
-    fun `transform test`(value: Any, expected: Any) {
-        assertEquals(expected, DefaultValueTransform(value, connection), "value: $value, class: ${value::class.java}")
+    fun `default transform test`(value: Any, expected: String) {
+        assertEquals(expected, DEFAULT_TRANSFORM(value, connection), "value: $value, class: ${value::class.java}")
     }
 
     private fun values() = listOf(
-        Instant.parse("2024-04-03T01:02:03.123456789Z").run { of(this, this) },
+        "2024-04-03T01:02:03.123456789Z".run {of(Instant.parse(this), this) },
         of(BigDecimal("00123.45600"), "123.456"),
         of(Date.valueOf(LocalDate.parse("2024-04-03")), "2024-04-03"),
         of(Time.valueOf(LocalTime.parse("01:02:03.123456789")), "01:02:03"),
