@@ -263,7 +263,7 @@ internal class FullReadDbOracleIntegrationTest {
                          RAISE;
                       END IF;
                 END;
-            """.trimIndent()
+                """.trimIndent()
             )
         LOGGER.info { "table dropped" }
     }
