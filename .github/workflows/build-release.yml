@@ -8,6 +8,11 @@ jobs:
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
       project-path: grpc
+  oracle-version:
+    name: Extract app version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: oracle
   app-version:
     name: Extract app version
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
@@ -20,6 +25,7 @@ jobs:
       app: ${{ steps.filter.outputs.app }}
       grpc: ${{ steps.filter.outputs.grpc }}
       core: ${{ steps.filter.outputs.core }}
+      oracle: ${{ steps.filter.outputs.oracle }}
     steps:
       - uses: dorny/paths-filter@v2
         id: filter
@@ -31,6 +37,8 @@ jobs:
               - 'grpc/gradle.properties'
             core:
               - 'core/gradle.properties'
+            oracle:
+              - 'oracle/gradle.properties'
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
     needs:
@@ -72,6 +80,22 @@ jobs:
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+  build-and-publish-oracle-extension-java:
+    name: Build and publish Java oracle extension distributions
+    needs:
+      - changes
+      - build-and-publish-core-java
+    if: ${{ needs.changes.outputs.oracle == 'true' }}
+    uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build-release.yml@main
+    with:
+      projectPath: oracle
+      release: true
+      additionalTasks: '["publish"]'
+    secrets:
+      sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+      sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+      sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+      sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
     needs:
       - build-and-publish-core-java
@@ -84,11 +108,12 @@ jobs:
     name: Build and publish docker image
     if: |
       always() &&
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true' || needs.changes.outputs.oracle == 'true')
     needs:
       - build-and-publish-grpc-python
       - build-and-publish-grpc-java
       - build-and-publish-core-java
+      - build-and-publish-oracle-extension-java
       - app-version
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
@@ -118,6 +143,14 @@ jobs:
     with:
       runsOn: ${{ inputs.runsOn }}
       tagName: ${{ needs.grpc-version.outputs.version }}-grpc
+  create-oracle-tag:
+    if: needs.build-and-publish-oracle-extension-java.result == 'success' && !cancelled()
+    name: Create and push oracle extension tag
+    needs: [ build-and-publish-oracle-extension-java ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.oracle-version.outputs.version }}-oracle
   create-app-tag:
     if: needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success' && !cancelled()
     name: Create and push app tag
