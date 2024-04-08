@@ -1,4 +1,4 @@
-# th2-read-db 0.9.0
+# th2-read-db 0.9.1
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -338,6 +338,10 @@ spec:
 [How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
+
+### 0.9.1
+
++ fixed the pull continuation failure when column with oracle DATE type is used for update query. 
 
 ### 0.9.0
 

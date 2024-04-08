@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin)
+    alias(libs.plugins.kapt)
     `java-library`
     `maven-publish`
 }
@@ -14,46 +15,35 @@ configurations.all {
 }
 
 dependencies {
-    implementation(project(":grpc-read-db"))
+    implementation(project(":read-db-core"))
 
-    implementation(libs.th2.common)
-    implementation(libs.th2.common.utils)
-    implementation(libs.th2.lw.data.provider.utils)
-
-    implementation("org.slf4j:slf4j-api")
-
-    implementation(libs.commons.dbcp2) {
-        because("connection pool")
-    }
-    implementation("org.apache.commons:commons-text")
-    implementation(libs.opencsv) {
-        because("publishes raw messages in csv format")
+    compileOnly(libs.ojdbc11) {
+        because("oracle support")
     }
 
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlin.logging)
-    implementation(libs.kotlin.logging)
-    implementation("com.fasterxml.jackson.core:jackson-databind")
+    // Auto service
+    compileOnly(libs.auto.service.annotations)
+    kapt(libs.auto.service)
 
     testImplementation(libs.junit.jupiter)
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
-    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.strikt.core)
 
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation("org.testcontainers:testcontainers")
-    testImplementation("org.testcontainers:mysql")
     testImplementation("org.testcontainers:oracle-xe")
     testImplementation("io.grpc:grpc-testing")
     testImplementation("io.grpc:grpc-inprocess")
 
     testImplementation(libs.th2.junit.jupiter.integration)
+    testImplementation(libs.awaitility)
+    testImplementation(project(":grpc-read-db"))
 
-    testRuntimeOnly(libs.mysql.connector.j) {
-        because("mysql support")
-    }
-    testRuntimeOnly(libs.ojdbc11) {
+    testImplementation(libs.kotlin.logging)
+    testImplementation(libs.th2.common.utils)
+    testImplementation(libs.th2.lw.data.provider.utils)
+
+    testImplementation(libs.ojdbc11) {
         because("oracle support")
     }
 }

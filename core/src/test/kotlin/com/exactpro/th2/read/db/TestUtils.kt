@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.annotations
+package com.exactpro.th2.read.db
 
-import org.junit.jupiter.api.Tag
-
-@Tag("integration-test")
-annotation class IntegrationTest
+const val MYSQL_DOCKER_IMAGE = "mysql:5.7.34"
+const val ORACLE_DOCKER_IMAGE = "gvenzl/oracle-xe:21-slim-faststart"

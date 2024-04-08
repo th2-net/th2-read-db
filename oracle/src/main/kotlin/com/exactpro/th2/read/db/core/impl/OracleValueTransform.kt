@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.annotations
+package com.exactpro.th2.read.db.core.impl
 
-import org.junit.jupiter.api.Tag
+import com.exactpro.th2.read.db.core.ValueTransform
+import oracle.sql.TIMESTAMP
+import oracle.sql.TIMESTAMPLTZ
+import oracle.sql.TIMESTAMPTZ
+import java.sql.Connection
 
-@Tag("integration-test")
-annotation class IntegrationTest
+object OracleValueTransform: ValueTransform {
+    override fun invoke(value: Any, connection: Connection): Any = when(value) {
+        is TIMESTAMP -> value.toLocalDateTime().toString()
+        is TIMESTAMPTZ -> value.toZonedDateTime().toInstant().toString()
+        is TIMESTAMPLTZ -> value.toLocalDateTime(connection).toString()
+        else -> value
+    }
+}

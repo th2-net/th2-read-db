@@ -17,6 +17,8 @@ dependencyResolutionManagement {
 
 include 'app'
 include 'core'
+include 'oracle'
 include 'grpc'
 project(':grpc').name = 'grpc-read-db'
 project(':core').name = "read-db-core"
+project(':oracle').name = "read-db-oracle-extension"

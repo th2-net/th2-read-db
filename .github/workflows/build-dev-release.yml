@@ -28,6 +28,7 @@ jobs:
       app: ${{ steps.filter.outputs.app }}
       grpc: ${{ steps.filter.outputs.grpc }}
       core: ${{ steps.filter.outputs.core }}
+      oracle: ${{ steps.filter.outputs.oracle }}
     steps:
       - uses: actions/checkout@v3
       - uses: dorny/paths-filter@v2
@@ -41,6 +42,8 @@ jobs:
               - 'grpc/gradle.properties'
             core:
               - 'core/gradle.properties'
+            oracle:
+              - 'oracle/gradle.properties'
   grpc-version:
     name: Extract grpc version
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
@@ -51,6 +54,11 @@ jobs:
     uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
     with:
       project-path: app
+  oracle-version:
+    name: Extract oracle version
+    uses: th2-net/.github/.github/workflows/compound-prebuild-java-workflow.yml@main
+    with:
+      project-path: oracle
 
   build-and-publish-grpc-java:
     name: Build and publish Java gRPC distributions
@@ -112,6 +120,32 @@ jobs:
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
+
+  build-and-publish-oracle-extension-java:
+    name: Build and publish Java oracle extension distributions
+    runs-on: 'ubuntu-20.04'
+    needs:
+      - build-and-publish-core-java
+      - changes
+    if: |
+      always() &&
+      (needs.changes.outputs.oracle == 'true' || needs.changes.outputs.core == 'true')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 'zulu' '11'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew --info -Pversion_suffix='dev' clean build :read-db-oracle-extension:publish closeAndReleaseSonatypeStagingRepository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
     if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
@@ -122,11 +156,11 @@ jobs:
   publish-docker:
     name: Build and publish docker image
     needs:
-      - build-and-publish-core-java
+      - build-and-publish-oracle-extension-java
       - app-version
       - changes
     if: |
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true')
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true' || needs.changes.outputs.oracle == 'true')
       && !cancelled()
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
@@ -157,6 +191,14 @@ jobs:
     with:
       runsOn: ${{ inputs.runsOn }}
       tagName: ${{ needs.grpc-version.outputs.version }}-grpc-dev
+  create-oracle-tag:
+    if: needs.build-and-publish-oracle-extension-java.result == 'success'&& !cancelled()
+    name: Create and push oracle extension tag
+    needs: [ build-and-publish-oracle-extension-java ]
+    uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
+    with:
+      runsOn: ${{ inputs.runsOn }}
+      tagName: ${{ needs.oracle-version.outputs.version }}-oracle-dev
   create-app-tag:
     if: needs.publish-docker.result == 'success' && needs.build-and-publish-core-java.result == 'success' && !cancelled()
     name: Create and push app tag

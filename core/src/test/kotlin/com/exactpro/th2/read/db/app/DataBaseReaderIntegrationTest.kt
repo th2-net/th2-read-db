@@ -16,8 +16,8 @@
 
 package com.exactpro.th2.read.db.app
 
+import com.exactpro.th2.read.db.MYSQL_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
-import com.exactpro.th2.read.db.containers.MySqlContainer
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
@@ -30,9 +30,11 @@ import com.exactpro.th2.read.db.core.ResultListener
 import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.UpdateListener
+import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TRANSFORM
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
+import io.netty.buffer.ByteBufUtil.decodeHexDump
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -62,6 +64,8 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.testcontainers.containers.MySQLContainer
+import org.testcontainers.utility.DockerImageName
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import java.io.ByteArrayInputStream
@@ -79,7 +83,7 @@ import java.time.temporal.ChronoUnit
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderIntegrationTest {
-    private val mysql = MySqlContainer()
+    private val mysql = MySQLContainer(DockerImageName.parse(MYSQL_DOCKER_IMAGE))
     private val persons = (1..30).map {
         Person("person$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-data-$it".toByteArray())
     }
@@ -586,9 +590,9 @@ internal class DataBaseReaderIntegrationTest {
         verify(this, timeout(timeout).times(persons.size)).onUpdate(any(), tableRawCaptor.capture(), propertiesCaptor.capture())
         tableRawCaptor.allValues.map {
             Person(
-                checkNotNull(it.columns["name"]).toString(),
-                (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                (checkNotNull(it.columns["data"]) as ByteArray),
+                checkNotNull(it.columns["name"]),
+                LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
+                decodeHexDump(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
@@ -603,18 +607,16 @@ internal class DataBaseReaderIntegrationTest {
         verify(this, timeout(timeout).times(persons.size)).onRow(any(), captor.capture())
         captor.allValues.map {
             Person(
-                checkNotNull(it.columns["name"]).toString(),
-                (checkNotNull(it.columns["birthday"]) as LocalDate).atStartOfDay().toInstant(ZoneOffset.UTC),
-                (checkNotNull(it.columns["data"]) as ByteArray),
+                checkNotNull(it.columns["name"]),
+                LocalDate.parse(checkNotNull(it.columns["birthday"])).atStartOfDay().toInstant(ZoneOffset.UTC),
+                decodeHexDump(checkNotNull(it.columns["data"])),
             )
         }.also {
             expectThat(it).containsExactly(persons)
         }
     }
 
-    private fun execute(action: Connection.() -> Unit) {
-        mysql.createConnection("").use { it.action() }
-    }
+    private fun <T> execute(action: Connection.() -> T): T = mysql.createConnection("").use { it.action() }
 
     private fun Connection.initTestData() {
         createStatement()
@@ -667,11 +669,13 @@ internal class DataBaseReaderIntegrationTest {
     }
 
     private fun Person.toTableRow(id: Int): TableRow = TableRow(
-        mapOf(
-            "id" to id,
-            "name" to name,
-            "birthday" to birthday.toString()
-        )
+        execute {
+            mapOf(
+                "id" to DEFAULT_TRANSFORM(id, this),
+                "name" to name,
+                "birthday" to DEFAULT_TRANSFORM(birthday, this)
+            )
+        }
     )
 
     companion object {

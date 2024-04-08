@@ -1,6 +1,6 @@
 plugins {
     id("application")
-    id("com.exactpro.th2.gradle.component")
+    alias(libs.plugins.th2.component)
 }
 
 configurations.all {
@@ -11,17 +11,29 @@ configurations.all {
 dependencies {
     implementation(project(":read-db-core"))
 
-    //region Drivers
-    runtimeOnly("org.postgresql:postgresql:42.7.3") {
+    //region postgresql
+    runtimeOnly(libs.postgresql) {
         because("prostresql support")
     }
-    runtimeOnly("com.mysql:mysql-connector-j:8.3.0") {
+    //endregion
+
+    //region mysql
+    runtimeOnly(libs.mysql.connector.j) {
         because("mysql support")
     }
-    runtimeOnly("com.oracle.database.jdbc:ojdbc11:23.3.0.23.09") {
+    //endregion
+
+    //region oracle
+    runtimeOnly(libs.ojdbc11) {
         because("oracle support")
     }
-    runtimeOnly("com.microsoft.sqlserver:mssql-jdbc:12.4.0.jre11") {
+    runtimeOnly(project(":read-db-oracle-extension")) {
+        because("oracle support")
+    }
+    //endregion
+
+    //region mssql
+    runtimeOnly(libs.mssql.jdbc) {
         because("mssql support")
     }
     //endregion

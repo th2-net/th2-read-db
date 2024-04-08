@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.read.db.containers
+package com.exactpro.th2.read.db.core.impl
 
-import org.testcontainers.containers.OracleContainer
-import org.testcontainers.utility.DockerImageName
+import com.exactpro.th2.read.db.core.ValueTransform
+import com.exactpro.th2.read.db.core.ValueTransformerFactory
+import com.google.auto.service.AutoService
 
-class OracleContainer : OracleContainer(DockerImageName.parse("gvenzl/oracle-xe:21-slim-faststart"))
+@AutoService(ValueTransformerFactory::class)
+class OracleValueTransformerFactory: ValueTransformerFactory {
+    override val dbVendor: String = "oracle"
+    override val transformer: ValueTransform
+        get() = OracleValueTransform
+}

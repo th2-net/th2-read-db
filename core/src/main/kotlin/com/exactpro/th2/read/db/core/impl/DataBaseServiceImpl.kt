@@ -24,6 +24,8 @@ import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.QueryProvider
 import com.exactpro.th2.read.db.core.TableRow
+import com.exactpro.th2.read.db.core.ToNullableStringTransformer
+import com.exactpro.th2.read.db.core.ValueTransformProvider
 import com.exactpro.th2.read.db.core.exception.QueryExecutionException
 import com.exactpro.th2.read.db.core.get
 import com.exactpro.th2.read.db.core.util.getColumnValue
@@ -34,17 +36,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import mu.KotlinLogging
-import java.sql.Clob
 import java.sql.Connection
-import java.sql.Date
 import java.sql.ResultSet
-import java.sql.Time
-import java.sql.Timestamp
 import javax.sql.DataSource
 
 class DataBaseServiceImpl(
     private val dataSourceProvider: DataSourceProvider,
     private val queriesProvider: QueryProvider,
+    private val transformProvider: ValueTransformProvider,
 ) : DataBaseService {
     override fun executeQuery(
         dataSourceId: DataSourceId,
@@ -55,10 +54,11 @@ class DataBaseServiceImpl(
     ): Flow<TableRow> {
         LOGGER.info { "Executing query $queryId for $dataSourceId connection with $parameters parameters without default" }
         val dataSource: DataSource = dataSourceProvider[dataSourceId].dataSource
+        val transformValue: ToNullableStringTransformer = transformProvider[dataSourceId]
         val queryHolder: QueryHolder = queriesProvider[queryId]
         val beforeQueryHolders: List<QueryHolder> = before.map(queriesProvider::get)
         val afterQueryHolders: List<QueryHolder> = after.map(queriesProvider::get)
-        val connection = dataSource.connection
+        val connection: Connection = dataSource.connection
         val finalParameters = queryHolder.defaultParameters.toMutableMap().apply {
             putAll(parameters)
         }
@@ -87,7 +87,7 @@ class DataBaseServiceImpl(
                 if (columns == null) {
                     columns = resultSet.extractColumns()
                 }
-                emit(resultSet.transform(columns, associatedMessageType))
+                emit(resultSet.transform(columns, associatedMessageType, transformValue, connection))
             }
         }.onCompletion { reason ->
             try {
@@ -135,6 +135,7 @@ class DataBaseServiceImpl(
     companion object {
         private val LOGGER = KotlinLogging.logger { }
     }
+
 }
 
 private fun ResultSet.extractColumns(): List<String> = metaData.run {
@@ -144,14 +145,9 @@ private fun ResultSet.extractColumns(): List<String> = metaData.run {
 private fun ResultSet.transform(
     columns: Collection<String>,
     associatedMessageType: String?,
-): TableRow = TableRow(columns.associateWith(this::getColumnValue.asRegularValues()), associatedMessageType)
-
-private fun ((String) -> Any?).asRegularValues(): (String) -> Any? = {
-    when (val value = this(it)) {
-        is Date -> value.toLocalDate()
-        is Time -> value.toLocalTime()
-        is Timestamp -> value.toInstant()
-        is Clob -> value.characterStream.readText()
-        else -> value
-    }
-}
+    transform: ToNullableStringTransformer,
+    connection: Connection,
+): TableRow = TableRow(
+    columns.associateWith { transform(getColumnValue(it), connection) },
+    associatedMessageType
+)

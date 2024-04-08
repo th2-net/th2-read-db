@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.exactpro.th2.read.db.app
 
+import com.exactpro.th2.read.db.ORACLE_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.DELETE
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.INSERT
 import com.exactpro.th2.read.db.app.DataBaseReaderOracleIntegrationTest.Operation.UPDATE
-import com.exactpro.th2.read.db.containers.OracleContainer
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataSourceConfiguration
 import com.exactpro.th2.read.db.core.DataSourceId
@@ -52,6 +52,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.testcontainers.containers.OracleContainer
+import org.testcontainers.utility.DockerImageName
 import java.io.ByteArrayInputStream
 import java.sql.Connection
 import java.sql.Date
@@ -65,7 +67,7 @@ import java.time.temporal.ChronoUnit
 @IntegrationTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderOracleIntegrationTest {
-    private val oracle = OracleContainer()
+    private val oracle = OracleContainer(DockerImageName.parse(ORACLE_DOCKER_IMAGE))
     private lateinit var redoFiles: List<String>
     private val persons = (1..15).map {
         Person(it, "$TABLE_NAME$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-init-data-$it".toByteArray())
@@ -140,7 +142,6 @@ internal class DataBaseReaderOracleIntegrationTest {
                             "ALTER TABLE $TABLE_SPACE.$TABLE_NAME ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS"
                         ),
                         QueryId("start-log-miner") to QueryConfiguration(
-                            // FIXME: add timestamp limitation
                             "{CALL DBMS_LOGMNR.START_LOGMNR (OPTIONS => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG + DBMS_LOGMNR.COMMITTED_DATA_ONLY)}"
                         ),
                         QueryId("stop-log-miner") to QueryConfiguration(
@@ -234,13 +235,13 @@ internal class DataBaseReaderOracleIntegrationTest {
             checkNotNull(tableRow.columns["SCN"]) {
                 "'SCN' column in $index row"
             }
-            val rowId = checkNotNull(tableRow.columns["ROW_ID"]?.toString()) {
+            val rowId = checkNotNull(tableRow.columns["ROW_ID"]) {
                 "'ROW_ID' column in $index row"
             }
-            assertEquals(historyEntity.operation.name, tableRow.columns["OPERATION"]?.toString()) {
+            assertEquals(historyEntity.operation.name, tableRow.columns["OPERATION"]) {
                 "'OPERATION' column in $index row"
             }
-            val sql = checkNotNull(tableRow.columns["SQL_REDO"]?.toString()) {
+            val sql = checkNotNull(tableRow.columns["SQL_REDO"]) {
                 "'SQL_REDO' column in $index row"
             }
 
