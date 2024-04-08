@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,38 +84,53 @@ fun main(args: Array<String>) {
     // Configure shutdown hook for closing all resources
     // and the lock condition to await termination.
     //
-    // If you use the logic that doesn't require additional threads
+    // If you use the logic that doesn't require additional threads,
     // and you can run everything on main thread
     // you can omit the part with locks (but please keep the resources queue)
-    val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
+    val resourceRegister = ResourceRegister()
     val lock = ReentrantLock()
     val condition: Condition = lock.newCondition()
-    configureShutdownHook(resources, lock, condition)
+    configureShutdownHook(resourceRegister, lock, condition)
 
     try {
         // You need to initialize the CommonFactory
-        val resourceHandler: (name: String, resource: () -> Unit) -> Unit = { name, resource ->
-            resources += {
-                LOGGER.info { "Closing resource $name" }
-                runCatching(resource).onFailure {
-                    LOGGER.error(it) { "cannot close resource $name" }
-                }
-            }
-        }
-
         // You can use custom paths to each config that is required for the CommonFactory
         // If args are empty the default path will be chosen.
         val factory = CommonFactory.createFromArguments(*args)
         // do not forget to add resource to the resources queue
-        resourceHandler("common factory", factory::close)
+        resourceRegister.add("common factory", factory::close)
 
-        setupApp(factory, resourceHandler)
+        setupApp(factory, resourceRegister::add)
 
         awaitShutdown(lock, condition)
     } catch (ex: Exception) {
         LOGGER.error(ex) { "Cannot start the box" }
         exitProcess(1)
     }
+}
+
+class ResourceRegister: AutoCloseable {
+    private val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
+
+    fun add(name: String, resource: () -> Unit) {
+        resources += {
+            LOGGER.info { "Closing resource $name" }
+            runCatching(resource).onFailure {
+                LOGGER.error(it) { "cannot close resource $name" }
+            }
+        }
+    }
+
+    override fun close() {
+        resources.descendingIterator().forEachRemaining { resource ->
+            try {
+                resource()
+            } catch (e: Exception) {
+                LOGGER.error(e) { "Cannot close resource ${resource::class}" }
+            }
+        }
+    }
+
 }
 
 internal fun setupApp(
@@ -404,7 +419,7 @@ private class TransportPreprocessor(bookName: String) : Preprocessor<RawMessage.
 
 private data class SessionKey<DIRECTION>(val alias: String, val direction: DIRECTION)
 
-private fun configureShutdownHook(resources: Deque<() -> Unit>, lock: ReentrantLock, condition: Condition) {
+private fun configureShutdownHook(resourceRegister: ResourceRegister, lock: ReentrantLock, condition: Condition) {
     Runtime.getRuntime().addShutdownHook(thread(
         start = false,
         name = "Shutdown hook"
@@ -417,13 +432,7 @@ private fun configureShutdownHook(resources: Deque<() -> Unit>, lock: ReentrantL
         } finally {
             lock.unlock()
         }
-        resources.descendingIterator().forEachRemaining { resource ->
-            try {
-                resource()
-            } catch (e: Exception) {
-                LOGGER.error(e) { "Cannot close resource ${resource::class}" }
-            }
-        }
+        resourceRegister.close()
         LIVENESS_MONITOR.disable()
         LOGGER.info { "Shutdown end" }
     })
