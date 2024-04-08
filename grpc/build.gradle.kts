@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     `maven-publish`
-    alias(libs.plugins.th2.grpc)
+    id("com.exactpro.th2.gradle.grpc")
 }
 
 configurations.all {

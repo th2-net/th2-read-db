@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin)
-    alias(libs.plugins.kapt)
+    kotlin("jvm")
+    kotlin("kapt")
     `java-library`
     `maven-publish`
 }
