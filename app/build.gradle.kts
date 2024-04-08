@@ -1,6 +1,6 @@
 plugins {
     id("application")
-    id("com.exactpro.th2.gradle.component")
+    alias(libs.plugins.th2.component)
 }
 
 configurations.all {
