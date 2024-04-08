@@ -161,20 +161,24 @@ internal class FullReadDbOracleIntegrationTest {
                 }
         }, MESSAGE_OUT_PIN)
 
-
-
+        val now = Instant.now()
         val readDb = test.grpcRouter.getService(ReadDbService::class.java)
         ResourceRegister().use { register ->
             setupApp(factory, register::add)
-
-            execute { insertData(listOf(Record(1, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
+            execute {
+                val date = now.minusSeconds(1)
+                insertData(listOf(Record(1, date, date, date, date)))
+            }
             readDb.startPulling(dbPullRequest)
             await("first message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 1 }
         }
 
         ResourceRegister().use { register ->
             setupApp(factory, register::add)
-            execute { insertData(listOf(Record(2, Instant.now(), Instant.now(), Instant.now(), Instant.now()))) }
+            execute {
+                val date = now.plusSeconds(1)
+                insertData(listOf(Record(2, date, date, date, date)))
+            }
             readDb.startPulling(dbPullRequest)
             await("second message").atMost(5, TimeUnit.SECONDS).until { publishedMessages.size == 2 }
         }

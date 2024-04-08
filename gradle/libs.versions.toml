@@ -1,0 +1,42 @@
+[versions]
+kotlin = "1.8.22"
+kotlinx-coroutines = "1.7.3"
+auto-service = "1.1.1"
+th2-plugin = "0.0.4"
+
+[libraries]
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+
+postgresql = { group = "org.postgresql", name = "postgresql", version = "42.7.3" }
+mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j", version = "8.3.0" }
+ojdbc11 = { group = "com.oracle.database.jdbc", name = "ojdbc11", version = "23.3.0.23.09" }
+mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version = "12.4.0.jre11" }
+
+th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.2.2-dev" }
+th2-common = { group = "com.exactpro.th2", name = "common", version = "5.10.0-dev" }
+th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.4.0-dev" }
+th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.1-dev" }
+th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.0.1" }
+
+auto-service-annotations = { group = "com.google.auto.service", name = "auto-service-annotations", version.ref = "auto-service" }
+auto-service = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto-service" }
+
+opencsv = { group = "com.opencsv", name = "opencsv", version = "5.9" }
+kotlin-logging = { group = "io.github.microutils", name = "kotlin-logging", version = "3.0.5" }
+strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
+commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.9.0" }
+
+testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "1.19.7" }
+
+awaitility = { group = "org.awaitility", name = "awaitility", version = "4.2.1" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version = "5.10.0" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version = "5.1.0" }
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+th2-base = { id = "com.exactpro.th2.gradle.base", version.ref = "th2-plugin" }
+th2-publish = { id = "com.exactpro.th2.gradle.publish", version.ref = "th2-plugin" }
+th2-grpc = { id = "com.exactpro.th2.gradle.grpc", version.ref = "th2-plugin" }
+th2-component = { id = "com.exactpro.th2.gradle.component", version.ref = "th2-plugin" }
