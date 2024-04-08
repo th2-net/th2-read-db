@@ -69,7 +69,7 @@ jobs:
     needs:
       - changes
       - build-and-publish-grpc-java
-    if: ${{ needs.changes.outputs.core == 'true' }}
+    if: (needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true') && !cancelled()
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build-release.yml@main
     with:
       projectPath: core
@@ -97,8 +97,7 @@ jobs:
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
-    needs:
-      - build-and-publish-core-java
+    if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
@@ -107,8 +106,8 @@ jobs:
   publish-docker:
     name: Build and publish docker image
     if: |
-      always() &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true' || needs.changes.outputs.oracle == 'true')
+      && !cancelled()
     needs:
       - build-and-publish-grpc-python
       - build-and-publish-grpc-java
@@ -127,6 +126,7 @@ jobs:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
+    if: needs.publish-docker.result == 'success' && !cancelled()
     needs:
       - publish-docker
       - app-version

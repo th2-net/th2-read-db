@@ -103,9 +103,7 @@ jobs:
     needs:
       - build-and-publish-grpc-java
       - changes
-    if: |
-      always() &&
-      (needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true')
+    if: (needs.changes.outputs.core == 'true' || needs.changes.outputs.grpc == 'true') && !cancelled()
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 'zulu' '11'
@@ -149,8 +147,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
-    needs:
-      - build-and-publish-core-java
+    if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
     with:
       multiproject: true
@@ -163,8 +160,8 @@ jobs:
       - app-version
       - changes
     if: |
-      always() &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.grpc == 'true' || needs.changes.outputs.core == 'true' || needs.changes.outputs.oracle == 'true')
+      && !cancelled()
     uses: th2-net/.github/.github/workflows/compaund-java-docker-push.yml@main
     with:
       docker-username: ${{ github.actor }}
@@ -177,6 +174,7 @@ jobs:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
   trivy-docker-scan:
     name: Scan Docker image for vulnerabilities
+    if: needs.publish-docker.result == 'success' && !cancelled()
     needs:
       - publish-docker
       - app-version
