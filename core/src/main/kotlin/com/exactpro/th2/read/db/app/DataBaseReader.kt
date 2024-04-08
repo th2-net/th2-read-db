@@ -28,6 +28,7 @@ import com.exactpro.th2.read.db.core.RowListener
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.TaskId
 import com.exactpro.th2.read.db.core.UpdateListener
+import com.exactpro.th2.read.db.core.ValueTransformProvider
 import com.exactpro.th2.read.db.core.impl.DataBaseMonitorServiceImpl
 import com.exactpro.th2.read.db.core.impl.DataBaseServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
@@ -210,7 +211,8 @@ class DataBaseReader(
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
             val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
-            val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider)
+            val transformProvider: ValueTransformProvider = ValueTransformProvider.create(configuration.dataSources)
+            val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider, transformProvider)
             val hashService: HashService = BaseHashServiceImpl(sourceProvider, queryProvider)
             val monitorService: DataBaseMonitorService = DataBaseMonitorServiceImpl(dataBaseService, hashService, clock)
             return DataBaseReader(

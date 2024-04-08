@@ -28,10 +28,8 @@ import com.exactpro.th2.dataprovider.lw.grpc.DataProviderService
 import com.exactpro.th2.dataprovider.lw.grpc.MessageGroupResponse
 import com.exactpro.th2.dataprovider.lw.grpc.MessageGroupsSearchRequest
 import com.exactpro.th2.dataprovider.lw.grpc.MessageSearchResponse
-import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.bootstrap.ResourceRegister
 import com.exactpro.th2.read.db.bootstrap.setupApp
-import com.exactpro.th2.read.db.containers.OracleContainer
 import com.exactpro.th2.read.db.grpc.DbPullRequest
 import com.exactpro.th2.read.db.grpc.ReadDbService
 import com.exactpro.th2.test.annotations.CustomConfigProvider
@@ -56,9 +54,12 @@ import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.testcontainers.containers.OracleContainer
 import org.testcontainers.shaded.org.awaitility.Awaitility.await
+import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -77,9 +78,9 @@ private const val TIMESTAMP_WITH_TIME_ZONE_COLUMN = "TIMESTAMP_WITH_TIME_ZONE_CO
 private const val TIMESTAMP_WITH_LOCAL_TIME_ZONE_COLUMN = "TIMESTAMP_WITH_LOCAL_TIME_ZONE_COLUMN"
 
 @Th2IntegrationTest
-@IntegrationTest
+@Tag("integration-test")
 internal class FullReadDbOracleIntegrationTest {
-    private val oracle = OracleContainer()
+    private val oracle = OracleContainer(DockerImageName.parse("gvenzl/oracle-xe:21-slim-faststart"))
 
     @Suppress("unused")
     val grpc = GrpcSpec.create()
@@ -124,8 +125,8 @@ internal class FullReadDbOracleIntegrationTest {
     @CsvSource(
         "$PULL_BY_DATE_QUERY_ID,$DATE_COLUMN",
         "$PULL_BY_TIMESTAMP_QUERY_ID,$TIMESTAMP_COLUMN",
-//        "$PULL_BY_TIMESTAMP_WITH_TIME_ZONE_QUERY_ID,$TIMESTAMP_WITH_TIME_ZONE_COLUMN",
-//        "$PULL_BY_TIMESTAMP_WITH_LOCAL_TIME_ZONE_QUERY_ID,$TIMESTAMP_WITH_LOCAL_TIME_ZONE_COLUMN",
+        "$PULL_BY_TIMESTAMP_WITH_TIME_ZONE_QUERY_ID,$TIMESTAMP_WITH_TIME_ZONE_COLUMN",
+        "$PULL_BY_TIMESTAMP_WITH_LOCAL_TIME_ZONE_QUERY_ID,$TIMESTAMP_WITH_LOCAL_TIME_ZONE_COLUMN",
     )
     @CustomConfigProvider("config")
     fun `pull by date filed type test`(

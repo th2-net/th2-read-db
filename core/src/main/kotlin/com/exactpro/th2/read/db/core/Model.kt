@@ -37,7 +37,7 @@ data class QueryId(val id: String)
 data class TaskId(val id: String)
 
 data class TableRow(
-    val columns: Map<String, Any?>,
+    val columns: Map<String, String?>,
     val associatedMessageType: String? = null,
     val executionId: Long? = null
 )

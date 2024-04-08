@@ -18,9 +18,9 @@ package com.exactpro.th2.read.db.app
 
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.exactpro.th2.read.db.MYSQL_DOCKER_IMAGE
 import com.exactpro.th2.read.db.annotations.IntegrationTest
 import com.exactpro.th2.read.db.bootstrap.setupApp
-import com.exactpro.th2.read.db.containers.MySqlContainer
 import com.exactpro.th2.read.db.grpc.QueryId
 import com.exactpro.th2.read.db.grpc.QueryRequest
 import com.exactpro.th2.read.db.grpc.ReadDbService
@@ -46,13 +46,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.testcontainers.containers.MySQLContainer
+import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
 
 
 @Th2IntegrationTest
 @IntegrationTest
 internal class FullReadDbIntegrationTest {
-    private val mysql = MySqlContainer()
+    private val mysql = MySQLContainer(DockerImageName.parse(MYSQL_DOCKER_IMAGE))
 
     @Suppress("unused")
     val grpc = GrpcSpec.create()
@@ -136,6 +138,7 @@ internal class FullReadDbIntegrationTest {
         }
     }
 
+    @Suppress("unused")
     fun config(): CustomConfigSpec {
         return CustomConfigSpec.fromString(
             """

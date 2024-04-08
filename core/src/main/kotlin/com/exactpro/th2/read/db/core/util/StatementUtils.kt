@@ -26,6 +26,7 @@ import java.sql.Time
 import java.sql.Timestamp
 import java.sql.Types
 import java.time.Instant
+import java.time.LocalDateTime
 
 private val LOGGER = KotlinLogging.logger { }
 
@@ -72,7 +73,11 @@ private fun PreparedStatement.setManual(paramIndex: Int, value: String?, type: S
 
 private fun String.toTimestamp(): Timestamp {
     return if (this.contains("T")) {
-        Timestamp.from(Instant.parse(this))
+        if (this.endsWith("Z")) {
+            Timestamp.from(Instant.parse(this))
+        } else {
+            Timestamp.valueOf(LocalDateTime.parse(this))
+        }
     } else {
         Timestamp.valueOf(this)
     }

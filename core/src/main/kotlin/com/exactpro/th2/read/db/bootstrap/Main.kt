@@ -133,7 +133,7 @@ class ResourceRegister: AutoCloseable {
 
 }
 
-internal fun setupApp(
+fun setupApp(
     factory: CommonFactory,
     closeResource: (name: String, resource: () -> Unit) -> Unit,
 ) {
