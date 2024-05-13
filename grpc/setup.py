@@ -121,7 +121,7 @@ setup(
     python_requires='>=3.7',
     install_requires=[
         'grpcio-tools==1.56.0',
-        'th2-grpc-common==4.5.0.dev0',
+        'th2-grpc-common==4.5.0rc1',
         'mypy-protobuf==3.4'
     ],
     packages=packages,
