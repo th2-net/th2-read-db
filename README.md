@@ -1,4 +1,4 @@
-# th2-read-db 0.9.1
+# th2-read-db 0.10.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -339,6 +339,16 @@ spec:
 
 ## Changes
 
+### 0.10.0
+
++ updated th2 gradle plugin: `0.0.6`
++ updated:
+  + bom: `4.6.1`
+  + common: `5.11.0-dev`
+  + grpc-common: `4.5.0-dev`
+  + common-utils:`2.2.3-dev`
+  + lw-data-provider-utils:`0.0.2-dev`
+
 ### 0.9.1
 
 + fixed the pull continuation failure when column with oracle DATE type is used for update query. 
@@ -353,7 +363,6 @@ spec:
 + updated: 
   + common:`5.10.0-dev`
   + grpc-common:`4.4.0-dev`
-  + common-utils:`2.2.2-dev`
   + common-utils:`2.2.2-dev`
 
 ### 0.8.0

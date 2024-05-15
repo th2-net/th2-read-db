@@ -9,6 +9,9 @@ You can:
 
 # Release notes:
 
+## 0.0.9
++ updated grpc-common: `4.5.0-dev`
+
 ## 0.0.8
 + added `Load` method
 

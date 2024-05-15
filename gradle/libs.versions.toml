@@ -2,7 +2,7 @@
 kotlin = "1.8.22"
 kotlinx-coroutines = "1.7.3"
 auto-service = "1.1.1"
-th2-plugin = "0.0.4"
+th2-plugin = "0.0.6"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -13,10 +13,10 @@ mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j", version =
 ojdbc11 = { group = "com.oracle.database.jdbc", name = "ojdbc11", version = "23.3.0.23.09" }
 mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version = "12.4.0.jre11" }
 
-th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.2.2-dev" }
-th2-common = { group = "com.exactpro.th2", name = "common", version = "5.10.0-dev" }
-th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.4.0-dev" }
-th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.1-dev" }
+th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.2.3-dev" }
+th2-common = { group = "com.exactpro.th2", name = "common", version = "5.11.0-dev" }
+th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.5.0-dev" }
+th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.2-dev" }
 th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.0.1" }
 
 auto-service-annotations = { group = "com.google.auto.service", name = "auto-service-annotations", version.ref = "auto-service" }

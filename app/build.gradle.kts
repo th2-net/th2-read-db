@@ -40,6 +40,5 @@ dependencies {
 }
 
 application {
-    applicationName = "service"
     mainClass.set("com.exactpro.th2.read.db.bootstrap.Main")
 }
