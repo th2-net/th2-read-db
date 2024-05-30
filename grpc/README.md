@@ -1,4 +1,4 @@
-# gRPC for read-db (0.0.8)
+# gRPC for read-db (0.0.10)
 
 The read-db provides you with gRPC interface for interacting with database.
 You can:
@@ -8,6 +8,9 @@ You can:
 + submit pulling requests and stop them - `StartPulling` and `StopPulling` methods
 
 # Release notes:
+
+## 0.0.10
++ updated th2 gradle plugin `0.0.8`
 
 ## 0.0.9
 + updated grpc-common: `4.5.0-dev`
