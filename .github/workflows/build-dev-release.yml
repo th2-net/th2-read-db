@@ -193,7 +193,7 @@ jobs:
   create-oracle-tag:
     if: needs.build-and-publish-oracle-extension-java.result == 'success'&& !cancelled()
     name: Create and push oracle extension tag
-    needs: [ build-and-publish-oracle-extension-java ]
+    needs: [ oracle-version, build-and-publish-oracle-extension-java ]
     uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
     with:
       tagName: ${{ needs.oracle-version.outputs.version }}-oracle-dev
