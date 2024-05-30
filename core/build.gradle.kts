@@ -59,22 +59,16 @@ dependencies {
 }
 
 tasks {
-    test { useJUnitPlatform() }
+    test {
+        useJUnitPlatform {
+            excludeTags("integration-test")
+        }
+    }
 
     register<Test>("integrationTest") {
         group = "verification"
         useJUnitPlatform {
             includeTags("integration-test")
-        }
-        testLogging {
-            showStandardStreams = true
-        }
-    }
-
-    register<Test>("unitTest") {
-        group = "verification"
-        useJUnitPlatform {
-            excludeTags("integration-test")
         }
         testLogging {
             showStandardStreams = true
