@@ -1,4 +1,4 @@
-# th2-read-db 0.10.0
+# th2-read-db 0.11.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -338,6 +338,11 @@ spec:
 [How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
+
+### 0.11.0
+
++ updated th2 gradle plugin `0.0.8`
++ updated common: `5.12.0-dev`
 
 ### 0.10.0
 
