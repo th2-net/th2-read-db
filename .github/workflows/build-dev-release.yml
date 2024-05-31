@@ -69,12 +69,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 'zulu' '11'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
       - name: Build with Gradle
         run: ./gradlew --info -Pversion_suffix='dev' clean build :grpc-read-db:publish closeAndReleaseSonatypeStagingRepository
         env:
@@ -107,12 +107,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 'zulu' '11'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
       - name: Build with Gradle
         run: ./gradlew --info -Pversion_suffix='dev' clean build :read-db-core:publish closeAndReleaseSonatypeStagingRepository
         env:
@@ -133,12 +133,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 'zulu' '11'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
       - name: Build with Gradle
         run: ./gradlew --info -Pversion_suffix='dev' clean build :read-db-oracle-extension:publish closeAndReleaseSonatypeStagingRepository
         env:
@@ -193,7 +193,7 @@ jobs:
   create-oracle-tag:
     if: needs.build-and-publish-oracle-extension-java.result == 'success'&& !cancelled()
     name: Create and push oracle extension tag
-    needs: [ build-and-publish-oracle-extension-java ]
+    needs: [ oracle-version, build-and-publish-oracle-extension-java ]
     uses: th2-net/.github/.github/workflows/compaund-git-tag-push.yml@main
     with:
       tagName: ${{ needs.oracle-version.outputs.version }}-oracle-dev
