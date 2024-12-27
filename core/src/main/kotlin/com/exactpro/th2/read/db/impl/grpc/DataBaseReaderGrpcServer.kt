@@ -43,13 +43,13 @@ import com.exactpro.th2.read.db.impl.grpc.util.toGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.Empty
 import com.google.protobuf.Message
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.stub.ServerCallStreamObserver
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import mu.KotlinLogging
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong

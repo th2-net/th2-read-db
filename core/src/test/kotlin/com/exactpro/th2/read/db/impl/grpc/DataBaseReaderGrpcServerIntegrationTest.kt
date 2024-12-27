@@ -41,6 +41,7 @@ import com.exactpro.th2.read.db.grpc.ReadDbGrpc
 import com.exactpro.th2.read.db.impl.grpc.util.toModel
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.Timestamps
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.BindableService
 import io.grpc.Context
 import io.grpc.ManagedChannel
@@ -50,7 +51,6 @@ import io.grpc.inprocess.InProcessServerBuilder
 import io.netty.buffer.ByteBufUtil.decodeHexDump
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
