@@ -75,7 +75,7 @@ jobs:
       nvd-api-key: ${{ secrets.NVD_APIKEY }}
   license-scan:
     if: "!cancelled()"
-    uses: th2-net/.github/.github/workflows/license_check.yml@th2-1836-read-db-0.12.0-licenses # FIXME: migrate to main branch
+    uses: th2-net/.github/.github/workflows/license_check.yml@main
     needs:
       - app-version
     with:
