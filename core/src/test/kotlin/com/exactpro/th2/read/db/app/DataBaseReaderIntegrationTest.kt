@@ -357,7 +357,7 @@ internal class DataBaseReaderIntegrationTest {
         )
         val hashService: HashService = BaseHashServiceImpl(
             BaseDataSourceProvider(configuration.dataSources),
-            BaseQueryProvider(configuration.queries)
+            BaseQueryProvider(configuration.queries, configuration.queryFetchSize)
         )
 
         runTest {

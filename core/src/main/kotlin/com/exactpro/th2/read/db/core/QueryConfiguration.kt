@@ -23,5 +23,5 @@ data class QueryConfiguration(
     val query: String,
     val defaultParameters: QueryParametersValues = emptyMap(),
     val messageType: String? = null,
-    val fetchSize: Int = 0
+    val fetchSize: Int? = null,
 )

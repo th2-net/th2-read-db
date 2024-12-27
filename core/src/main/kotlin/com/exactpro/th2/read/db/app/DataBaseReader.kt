@@ -210,7 +210,7 @@ class DataBaseReader(
             clock: Clock = Clock.systemDefaultZone()
         ): DataBaseReader {
             val sourceProvider: DataSourceProvider = BaseDataSourceProvider(configuration.dataSources)
-            val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries)
+            val queryProvider: QueryProvider = BaseQueryProvider(configuration.queries, configuration.queryFetchSize)
             val transformProvider: ValueTransformProvider = ValueTransformProvider.create(configuration.dataSources)
             val dataBaseService: DataBaseService = DataBaseServiceImpl(sourceProvider, queryProvider, transformProvider)
             val hashService: HashService = BaseHashServiceImpl(sourceProvider, queryProvider)

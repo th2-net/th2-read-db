@@ -167,8 +167,7 @@ class ExecuteBodyDataTest {
                 |"username":"test-username"
               |},
               |"query":{
-                |"query":"test-query",
-                |"fetchSize":0
+                |"query":"test-query"
               |},
               |"request":{
                 |"sourceId":"test-data-source-id",

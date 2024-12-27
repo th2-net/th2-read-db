@@ -51,6 +51,12 @@ eventPublication:
 
 ## Parameters
 
+The list of read-db parameters
+
++ queryFetchSize (default 0) - default value of `fetchSize` option of query parameters defined in `queries` section.
+  if value is 0 that means jdbc driver fetches result row without limitation.
++ useTransport (default false) - use th2 transport or protobuf protocol to publish outgoing messages
+
 ### dataSources
 
 The list of data sources where the read-db can connect.
@@ -73,7 +79,7 @@ The list of queries that can be executed by read-db.
 + messageType - the message type that should be associated with this query.
   If it is set the read-db will set a property `th2.csv.override_message_type` with specified value
 + fetchSize - the number of rows that should be fetched from the database when query is executed.
-  Default value is 0 that means jdbc driver fetches result row without limitation.
+  default value is `queryFetchSize` from root configuration.
 
 ### startupTasks
 
@@ -227,6 +233,7 @@ spec:
     eventPublication:
       maxBatchSizeInItems: 100
       maxFlushTime: 1000
+    queryFetchSize: 0
     useTransport: true
   pins:
     - name: client
@@ -304,6 +311,7 @@ spec:
     eventPublication:
       maxBatchSizeInItems: 100
       maxFlushTime: 1000
+    queryFetchSize: 0
     useTransport: true
   pins:
     mq:
@@ -342,7 +350,8 @@ spec:
 ## Changes
 
 ### 0.12.0
-+ added `fetchSize` option for query configuration.
++ added `fetchSize` option into query configuration.
++ added `queryFetchSize` option into root configuration.
 + updated:
   + th2 gradle plugin: `0.1.6` based on bom: `4.9.0`
   + common: `5.14.0-dev`

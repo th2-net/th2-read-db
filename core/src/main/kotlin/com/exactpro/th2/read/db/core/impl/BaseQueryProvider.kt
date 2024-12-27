@@ -28,7 +28,8 @@ import java.sql.JDBCType
 import java.sql.SQLType
 
 class BaseQueryProvider(
-    queriesConfiguration: Map<QueryId, QueryConfiguration>
+    queriesConfiguration: Map<QueryId, QueryConfiguration>,
+    queryFetchSize: Int,
 ) : QueryProvider {
     private val queryById: Map<QueryId, QueryHolder> = queriesConfiguration.mapValues { (id, cfg) ->
         LOGGER.trace { "Creating holder for $id query" }
@@ -40,7 +41,13 @@ class BaseQueryProvider(
                 LOGGER.warn { "Default parameter $it was not found in query. Known parameters: ${parameters.keys}" }
             }
         }
-        QueryHolder(processedQuery, parameters, cfg.defaultParameters, cfg.messageType, cfg.fetchSize).also {
+        QueryHolder(
+            processedQuery,
+            parameters,
+            cfg.defaultParameters,
+            cfg.messageType,
+            cfg.fetchSize ?: queryFetchSize
+        ).also {
             LOGGER.trace { "Holder for $id query created: $it" }
         }
     }

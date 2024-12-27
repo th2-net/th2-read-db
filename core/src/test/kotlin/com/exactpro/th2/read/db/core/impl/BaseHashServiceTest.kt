@@ -41,7 +41,7 @@ internal class BaseHashServiceTest {
             mapOf(queryId to QueryConfiguration(
                 "test-query",
                 mapOf("test-query-parameter" to listOf("test-query-parameter-value-a", "test-query-parameter-value-b"))
-            ))
+            )), 0
         )
         val hashService = BaseHashServiceImpl(
             dataSourceProvider,
