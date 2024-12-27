@@ -73,6 +73,13 @@ jobs:
       multiproject: true
     secrets:
       nvd-api-key: ${{ secrets.NVD_APIKEY }}
+  license-scan:
+    if: "!cancelled()"
+    uses: th2-net/.github/.github/workflows/license_check.yml@main
+    needs:
+      - app-version
+    with:
+      version: ${{ needs.app-version.outputs.version }}
   publish-docker:
     name: Build docker image
     needs:
