@@ -67,12 +67,33 @@ jobs:
       sonatypeSigningKey: ${{ secrets.SONATYPE_GPG_ARMORED_KEY }}
       sonatypeSigningPassword: ${{ secrets.SONATYPE_SIGNING_PASSWORD }}
   owasp-scan:
-    if: "!cancelled()"
-    uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
-    with:
-      multiproject: true
-    secrets:
-      nvd-api-key: ${{ secrets.NVD_APIKEY }}
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 11
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          gradle-home-cache-includes: |
+            caches
+            notifications
+            dependency-check-data
+      - name: Run OWASP multi-project scanning
+        run: ./gradlew dependencyCheckAggregate -PnvdApiKey=${{ secrets.NVD_APIKEY }}
+      - name: Upload OWASP scan results to GitHub Security tab
+        # dependabot does not have write access to publish scanning results (in any case we don't want that from temporal branches)
+        if: (success() || failure()) && github.actor != 'dependabot[bot]'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: './build/reports/dependency-check-report.sarif'
   license-scan:
     if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/license_check.yml@main
