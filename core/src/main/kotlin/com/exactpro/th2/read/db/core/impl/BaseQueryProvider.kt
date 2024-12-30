@@ -46,7 +46,7 @@ class BaseQueryProvider(
             parameters,
             cfg.defaultParameters,
             cfg.messageType,
-            cfg.defaultFetchSize ?: defaultFetchSize
+            cfg.fetchSize ?: defaultFetchSize
         ).also {
             LOGGER.trace { "Holder for $id query created: $it" }
         }

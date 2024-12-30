@@ -89,7 +89,7 @@ class ExecuteBodyDataTest {
                     |]
                   |},
                   |"messageType":"test-before-message-type",
-                  |"defaultFetchSize":1000
+                  |"fetchSize":1000
                 |}
               |],
               |"query":{
@@ -100,7 +100,7 @@ class ExecuteBodyDataTest {
                   |]
                 |},
                 |"messageType":"test-message-type",
-                |"defaultFetchSize":1000
+                |"fetchSize":1000
               |},
               |"afterQueries":[
                 |{
@@ -111,7 +111,7 @@ class ExecuteBodyDataTest {
                     |]
                   |},
                   |"messageType":"test-after-message-type",
-                  |"defaultFetchSize":1000
+                  |"fetchSize":1000
                 |}
               |],
               |"request":{
