@@ -86,6 +86,8 @@ jobs:
             caches
             notifications
             dependency-check-data
+      - name: Gradle version
+        run: ./gradlew --version
       - name: Run OWASP multi-project scanning
         run: ./gradlew dependencyCheckAggregate -PnvdApiKey=${{ secrets.NVD_APIKEY }}
       - name: Upload OWASP scan results to GitHub Security tab
