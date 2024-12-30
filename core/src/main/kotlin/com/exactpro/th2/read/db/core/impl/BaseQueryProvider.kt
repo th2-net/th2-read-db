@@ -29,7 +29,7 @@ import java.sql.SQLType
 
 class BaseQueryProvider(
     queriesConfiguration: Map<QueryId, QueryConfiguration>,
-    queryFetchSize: Int,
+    defaultFetchSize: Int,
 ) : QueryProvider {
     private val queryById: Map<QueryId, QueryHolder> = queriesConfiguration.mapValues { (id, cfg) ->
         LOGGER.trace { "Creating holder for $id query" }
@@ -46,7 +46,7 @@ class BaseQueryProvider(
             parameters,
             cfg.defaultParameters,
             cfg.messageType,
-            cfg.fetchSize ?: queryFetchSize
+            cfg.defaultFetchSize ?: defaultFetchSize
         ).also {
             LOGGER.trace { "Holder for $id query created: $it" }
         }
