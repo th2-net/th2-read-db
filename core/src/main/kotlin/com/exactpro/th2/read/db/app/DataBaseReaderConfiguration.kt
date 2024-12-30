@@ -32,7 +32,7 @@ class DataBaseReaderConfiguration(
     val startupTasks: List<StartupTaskConfiguration> = emptyList(),
     val publication: PublicationConfiguration = PublicationConfiguration(),
     val eventPublication: EventPublicationConfiguration = EventPublicationConfiguration(),
-    val queryFetchSize: Int = 0,
+    val defaultQueryFetchSize: Int = 0,
     val useTransport: Boolean = false
 )
 
