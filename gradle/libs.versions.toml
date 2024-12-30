@@ -9,7 +9,7 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 
 postgresql = { group = "org.postgresql", name = "postgresql", version = "42.7.4" }
-mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j", version = "8.4.0" }
+mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j", version = "9.1.0" }
 ojdbc11 = { group = "com.oracle.database.jdbc", name = "ojdbc11", version = "23.6.0.24.10" }
 mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version = "12.8.1.jre11" }
 
