@@ -8,9 +8,9 @@ plugins {
     alias(libs.plugins.th2.component) apply false
 }
 
-dependencyCheck {
-    suppressionFile = "suppressions.xml"
-}
+//dependencyCheck {
+//    suppressionFile = "suppressions.xml"
+//}
 
 allprojects {
     group = "com.exactpro.th2"
