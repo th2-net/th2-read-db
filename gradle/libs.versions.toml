@@ -14,7 +14,7 @@ ojdbc11 = { group = "com.oracle.database.jdbc", name = "ojdbc11", version = "23.
 mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version = "12.8.1.jre11" }
 
 th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.3.0-dev" }
-th2-common = { group = "com.exactpro.th2", name = "common", version = "5.14.0-dev" }
+th2-common = { group = "com.exactpro.th2", name = "common", version = "5.15.0-windows-compatible-11379366273-569bd5b-SNAPSHOT" }
 th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.5.0-dev" }
 th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.3-dev" }
 th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.0.1" }
