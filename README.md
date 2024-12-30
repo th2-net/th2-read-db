@@ -1,4 +1,4 @@
-# th2-read-db 0.11.0
+# th2-read-db 0.12.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -51,6 +51,12 @@ eventPublication:
 
 ## Parameters
 
+The list of read-db parameters
+
++ defaultQueryFetchSize (default 0) - default value of `fetchSize` option of query parameters defined in `queries` section.
+  if value is 0 that means jdbc driver fetches result row without limitation.
++ useTransport (default false) - use th2 transport or protobuf protocol to publish outgoing messages
+
 ### dataSources
 
 The list of data sources where the read-db can connect.
@@ -72,6 +78,8 @@ The list of queries that can be executed by read-db.
 + defaultParameters - the default values for parameters. They will be used if the parameter was not specified in the request
 + messageType - the message type that should be associated with this query.
   If it is set the read-db will set a property `th2.csv.override_message_type` with specified value
++ fetchSize - the number of rows that should be fetched from the database when query is executed.
+  default value is `defaultQueryFetchSize` from root configuration.
 
 ### startupTasks
 
@@ -225,6 +233,7 @@ spec:
     eventPublication:
       maxBatchSizeInItems: 100
       maxFlushTime: 1000
+    defaultQueryFetchSize: 0
     useTransport: true
   pins:
     - name: client
@@ -302,6 +311,7 @@ spec:
     eventPublication:
       maxBatchSizeInItems: 100
       maxFlushTime: 1000
+    defaultQueryFetchSize: 0
     useTransport: true
   pins:
     mq:
@@ -338,6 +348,22 @@ spec:
 [How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
+
+### 0.12.0
++ added `fetchSize` option into query configuration.
++ added `defaultQueryFetchSize` option into root configuration.
++ updated:
+  + th2 gradle plugin: `0.1.6` based on bom: `4.9.0`
+  + common: `5.14.0-dev`
+  + common-utils: `2.3.0-dev`
+  + commons-dbcp2: `2.13.0`
++ updated jdbc:
+  + postgresql: `42.7.4`
+  + mysql-connector-j: `8.4.0`
+  + ojdbc11: `23.6.0.24.10`
+  + mssql-jdbc: `12.8.1.jre11`
++ migrated:
+  + io.github.oshai:kotlin-logging: `5.1.4`
 
 ### 0.11.0
 

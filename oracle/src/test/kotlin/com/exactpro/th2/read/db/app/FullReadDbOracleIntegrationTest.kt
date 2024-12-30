@@ -49,8 +49,8 @@ import com.exactpro.th2.test.spec.server
 import com.google.protobuf.UnsafeByteOperations
 import com.google.protobuf.util.Durations
 import com.google.protobuf.util.Timestamps
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.stub.StreamObserver
-import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach

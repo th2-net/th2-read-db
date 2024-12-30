@@ -34,13 +34,13 @@ import com.exactpro.th2.read.db.core.ValueTransformProvider.Companion.DEFAULT_TR
 import com.exactpro.th2.read.db.core.impl.BaseDataSourceProvider
 import com.exactpro.th2.read.db.core.impl.BaseHashServiceImpl
 import com.exactpro.th2.read.db.core.impl.BaseQueryProvider
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.buffer.ByteBufUtil.decodeHexDump
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import mu.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -357,7 +357,7 @@ internal class DataBaseReaderIntegrationTest {
         )
         val hashService: HashService = BaseHashServiceImpl(
             BaseDataSourceProvider(configuration.dataSources),
-            BaseQueryProvider(configuration.queries)
+            BaseQueryProvider(configuration.queries, configuration.defaultQueryFetchSize)
         )
 
         runTest {

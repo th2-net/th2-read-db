@@ -50,12 +50,12 @@ import com.exactpro.th2.read.db.impl.grpc.DataBaseReaderGrpcServer
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import mu.KotlinLogging
 import java.time.Duration
 import java.time.Instant
 import java.util.Deque

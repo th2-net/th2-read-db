@@ -16,7 +16,7 @@
 
 package com.exactpro.th2.read.db.core.util
 
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.sql.Array
 import java.sql.Date
 import java.sql.PreparedStatement

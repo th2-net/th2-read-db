@@ -16,9 +16,9 @@
 
 package com.exactpro.th2.read.db.core.impl
 
+import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataSourceProvider
-import com.exactpro.th2.read.db.core.DataBaseService
 import com.exactpro.th2.read.db.core.QueryHolder
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryParametersValues
@@ -32,10 +32,10 @@ import com.exactpro.th2.read.db.core.util.getColumnValue
 import com.exactpro.th2.read.db.core.util.runCatchingException
 import com.exactpro.th2.read.db.core.util.set
 import com.exactpro.th2.read.db.core.util.setCollection
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
-import mu.KotlinLogging
 import java.sql.Connection
 import java.sql.ResultSet
 import javax.sql.DataSource
@@ -128,6 +128,7 @@ class DataBaseServiceImpl(
                 }
             }
         }
+        fetchSize = holder.fetchSize
         LOGGER.trace { "Execute query: $holder" }
         executeQuery()
     }

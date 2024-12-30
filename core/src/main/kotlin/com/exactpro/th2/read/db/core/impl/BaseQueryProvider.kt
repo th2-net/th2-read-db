@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,15 @@ import com.exactpro.th2.read.db.core.QueryConfiguration
 import com.exactpro.th2.read.db.core.QueryHolder
 import com.exactpro.th2.read.db.core.QueryId
 import com.exactpro.th2.read.db.core.QueryProvider
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.text.StringSubstitutor
 import org.apache.commons.text.lookup.StringLookup
 import java.sql.JDBCType
 import java.sql.SQLType
 
 class BaseQueryProvider(
-    queriesConfiguration: Map<QueryId, QueryConfiguration>
+    queriesConfiguration: Map<QueryId, QueryConfiguration>,
+    defaultFetchSize: Int,
 ) : QueryProvider {
     private val queryById: Map<QueryId, QueryHolder> = queriesConfiguration.mapValues { (id, cfg) ->
         LOGGER.trace { "Creating holder for $id query" }
@@ -40,7 +41,13 @@ class BaseQueryProvider(
                 LOGGER.warn { "Default parameter $it was not found in query. Known parameters: ${parameters.keys}" }
             }
         }
-        QueryHolder(processedQuery, parameters, cfg.defaultParameters, cfg.messageType).also {
+        QueryHolder(
+            processedQuery,
+            parameters,
+            cfg.defaultParameters,
+            cfg.messageType,
+            cfg.fetchSize ?: defaultFetchSize
+        ).also {
             LOGGER.trace { "Holder for $id query created: $it" }
         }
     }

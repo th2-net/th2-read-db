@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,18 +40,23 @@ class ExecuteBodyDataTest {
             listOf(
                 QueryConfiguration(
                     "test-before-query",
-                    mapOf("test-before-parameter" to listOf("test-before-parameter-value"))
+                    mapOf("test-before-parameter" to listOf("test-before-parameter-value")),
+                    "test-before-message-type",
+                    1000,
                 )
             ),
             QueryConfiguration(
                 "test-query",
                 mapOf("test-parameter" to listOf("test-parameter-value")),
-                "test-message-type"
+                "test-message-type",
+                1000,
             ),
             listOf(
                 QueryConfiguration(
                     "test-after-query",
-                    mapOf("test-after-parameter" to listOf("test-after-parameter-value"))
+                    mapOf("test-after-parameter" to listOf("test-after-parameter-value")),
+                    "test-after-message-type",
+                    1000,
                 )
             ),
             ExecuteQueryRequest(
@@ -82,7 +87,9 @@ class ExecuteBodyDataTest {
                     |"test-before-parameter":[
                       |"test-before-parameter-value"
                     |]
-                  |}
+                  |},
+                  |"messageType":"test-before-message-type",
+                  |"fetchSize":1000
                 |}
               |],
               |"query":{
@@ -92,7 +99,8 @@ class ExecuteBodyDataTest {
                     |"test-parameter-value"
                   |]
                 |},
-                |"messageType":"test-message-type"
+                |"messageType":"test-message-type",
+                |"fetchSize":1000
               |},
               |"afterQueries":[
                 |{
@@ -101,7 +109,9 @@ class ExecuteBodyDataTest {
                     |"test-after-parameter":[
                       |"test-after-parameter-value"
                     |]
-                  |}
+                  |},
+                  |"messageType":"test-after-message-type",
+                  |"fetchSize":1000
                 |}
               |],
               |"request":{

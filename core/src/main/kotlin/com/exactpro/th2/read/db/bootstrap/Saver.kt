@@ -17,7 +17,7 @@
 package com.exactpro.th2.read.db.bootstrap
 
 import com.exactpro.th2.read.db.core.util.runCatchingException
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.TimeUnit

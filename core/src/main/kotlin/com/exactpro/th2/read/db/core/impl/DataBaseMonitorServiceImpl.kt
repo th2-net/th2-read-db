@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package com.exactpro.th2.read.db.core.impl
 
 import com.exactpro.th2.read.db.app.ResetState
-import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.DataBaseMonitorService
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.TH2_PULL_TASK_UPDATE_HASH_PROPERTY
 import com.exactpro.th2.read.db.core.DataBaseMonitorService.Companion.calculateNearestResetDate
 import com.exactpro.th2.read.db.core.DataBaseService
+import com.exactpro.th2.read.db.core.DataSourceId
 import com.exactpro.th2.read.db.core.HashService
 import com.exactpro.th2.read.db.core.HashService.Companion.calculateHash
 import com.exactpro.th2.read.db.core.MessageLoader
@@ -30,6 +30,7 @@ import com.exactpro.th2.read.db.core.QueryParametersValues
 import com.exactpro.th2.read.db.core.TableRow
 import com.exactpro.th2.read.db.core.TaskId
 import com.exactpro.th2.read.db.core.UpdateListener
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -40,7 +41,6 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import mu.KotlinLogging
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
