@@ -1,8 +1,8 @@
 [versions]
-kotlin = "1.8.22"
-kotlinx-coroutines = "1.7.3"
+kotlin = "2.1.10"
+kotlinx-coroutines = "1.10.1"
 auto-service = "1.1.1"
-th2-plugin = "0.1.6"
+th2-plugin = "0.2.4"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -23,7 +23,7 @@ auto-service-annotations = { group = "com.google.auto.service", name = "auto-ser
 auto-service = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto-service" }
 
 opencsv = { group = "com.opencsv", name = "opencsv", version = "5.9" }
-kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "5.1.4" }
+kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "7.0.5" }
 strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.13.0" }
 
