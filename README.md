@@ -352,6 +352,8 @@ spec:
 ### next
 + updated:
   + th2 gradle plugin: `0.2.4` based on bom: `4.11.0` 
+  + kotlin: `2.1.10`
+  + kotlin-logging: `7.0.5`
 
 ### 0.12.0
 + added `fetchSize` option into query configuration.
