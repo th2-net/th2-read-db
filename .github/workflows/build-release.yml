@@ -20,7 +20,7 @@ jobs:
       project-path: app
   changes:
     name: Collect changed files
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       app: ${{ steps.filter.outputs.app }}
       grpc: ${{ steps.filter.outputs.grpc }}
