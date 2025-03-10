@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Exactpro (Exactpro Systems Limited)
+ * Copyright 2022-2025 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ fun setupApp(
     val errors: List<String> = cfg.validate()
     if (errors.isNotEmpty()) {
         LOGGER.error { "Configuration errors found:" }
-        errors.forEach { LOGGER.error(it) }
+        errors.forEach { LOGGER.error { it } }
         throw IllegalArgumentException("Invalid configuration. ${errors.size} error(s) found")
     }
 
@@ -376,8 +376,8 @@ private fun protoKeyExtractor(builder: ProtoRawMessage.Builder): SessionKey<Prot
 private fun transportKeyExtractor(builder: RawMessage.Builder): SessionKey<Direction> =
     SessionKey(builder.idBuilder().sessionAlias, builder.idBuilder().direction)
 
-private abstract class Preprocessor<BUILDER, DIRECTION>(protected val configBookName: String) {
-    protected val sequences = ConcurrentHashMap<SessionKey<DIRECTION>, Long>()
+private abstract class Preprocessor<BUILDER, DIRECTION>(val configBookName: String) {
+    val sequences = ConcurrentHashMap<SessionKey<DIRECTION>, Long>()
     abstract fun preprocess(key: SessionKey<DIRECTION>, builder: BUILDER): BUILDER
 }
 
