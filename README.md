@@ -351,7 +351,7 @@ spec:
 
 ### next
 + updated:
-  + th2 gradle plugin: `0.2.3` based on bom: `4.11.0` 
+  + th2 gradle plugin: `0.2.4` based on bom: `4.11.0` 
 
 ### 0.12.0
 + added `fetchSize` option into query configuration.
