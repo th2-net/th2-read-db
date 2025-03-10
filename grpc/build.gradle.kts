@@ -9,11 +9,6 @@ configurations.all {
     resolutionStrategy.cacheDynamicVersionsFor(0, "seconds")
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
 dependencies {
     api(libs.th2.grpc.common)
 }
