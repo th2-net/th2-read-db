@@ -36,7 +36,7 @@ jobs:
     name: Build and publish Python distributions to PyPI
     needs:
       - grpc-version
-    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@dependabot-disable-python-publication # FIXME: replace to main
+    uses: th2-net/.github/.github/workflows/compaund-python-grpc-pypi-publication.yml@main
     with:
       custom-version: ${{ needs.grpc-version.outputs.versionNumber }}.dev${{ github.run_id }}
       project-path: grpc
