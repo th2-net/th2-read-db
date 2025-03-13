@@ -25,7 +25,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: grpc
-      additionalTasks: '["publish"]'
+      additionalTasks: ${{ github.actor != 'dependabot[bot]' && '["publish"]' || '[]' }}
       release: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
@@ -47,7 +47,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: core
-      additionalTasks: '["publish"]'
+      additionalTasks: ${{ github.actor != 'dependabot[bot]' && '["publish"]' || '[]' }}
       release: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
@@ -59,7 +59,7 @@ jobs:
     uses: th2-net/.github/.github/workflows/compaund-java-multi-project-build.yml@main
     with:
       projectPath: oracle
-      additionalTasks: '["publish"]'
+      additionalTasks: ${{ github.actor != 'dependabot[bot]' && '["publish"]' || '[]' }}
       release: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
@@ -69,10 +69,11 @@ jobs:
   owasp-scan:
     if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/owasp-gradle-scan.yml@main
-    with:
-      multiproject: true
     secrets:
       nvd-api-key: ${{ secrets.NVD_APIKEY }}
+      cisa-domain: ${{ secrets.CISA_DOMAIN }}
+      cisa-user: ${{ secrets.CISA_USER }}
+      cisa-password: ${{ secrets.CISA_PWD }}
   license-scan:
     if: "!cancelled()"
     uses: th2-net/.github/.github/workflows/license_check.yml@main
