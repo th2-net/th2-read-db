@@ -24,7 +24,7 @@ auto-service = { group = "com.google.auto.service", name = "auto-service", versi
 
 opencsv = { group = "com.opencsv", name = "opencsv", version = "5.9" }
 kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "7.0.5" }
-strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
+strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.35.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.13.0" }
 
 testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "1.20.6" }
