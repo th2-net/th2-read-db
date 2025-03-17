@@ -21,7 +21,8 @@ dependencies {
     compileOnly(libs.auto.service.annotations)
     kapt(libs.auto.service)
 
-    testImplementation(libs.junit.jupiter)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     testImplementation(libs.mockito.kotlin)
 
@@ -42,6 +43,7 @@ dependencies {
     testImplementation(libs.ojdbc11) {
         because("oracle support")
     }
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks {
