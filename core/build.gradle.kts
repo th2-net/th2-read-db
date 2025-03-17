@@ -31,7 +31,8 @@ dependencies {
     implementation(libs.kotlin.logging)
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
-    testImplementation(libs.junit.jupiter)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.kotlin)
@@ -46,6 +47,7 @@ dependencies {
 
     testImplementation(libs.th2.junit.jupiter.integration)
 
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly(libs.mysql.connector.j) {
         because("mysql support")
     }
