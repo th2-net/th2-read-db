@@ -1,4 +1,4 @@
-# th2-read-db 0.12.0
+# th2-read-db 0.13.0
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -349,12 +349,20 @@ spec:
 
 ## Changes
 
-### next
+### 0.13.0
 + updated:
   + th2 gradle plugin: `0.2.4` based on bom: `4.11.0` 
-  + kotlin: `2.1.10`
-  + kotlin-logging: `7.0.5`
+  + th2 common: `5.15.0-dev`
+  + th2 common-utils: `2.3.1-dev`
+  + kotlin: `2.1.20`
+  + kotlin-logging: `7.0.6`
   + kotlinx-coroutines: `1.10.1`
+  + opencsv: `5.10`
++ updated jdbc:
+  + postgresql: `42.7.5`
+  + mysql-connector-j: `9.2.0`
+  + ojdbc11: `23.7.0.25.01`
+  + mssql-jdbc: `12.10.0.jre11`
 
 ### 0.12.0
 + added `fetchSize` option into query configuration.
