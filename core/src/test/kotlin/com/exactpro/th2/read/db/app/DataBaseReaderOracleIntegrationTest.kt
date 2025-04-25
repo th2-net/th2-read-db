@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023-2025 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.apache.commons.dbcp2.BasicDataSource
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -68,6 +69,7 @@ import java.time.temporal.ChronoUnit
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DataBaseReaderOracleIntegrationTest {
     private val oracle = OracleContainer(DockerImageName.parse(ORACLE_DOCKER_IMAGE))
+    private lateinit var sysDataSource: BasicDataSource
     private lateinit var redoFiles: List<String>
     private val persons = (1..15).map {
         Person(it, "$TABLE_NAME$it", Instant.now().truncatedTo(ChronoUnit.DAYS), "test-init-data-$it".toByteArray())
@@ -94,10 +96,15 @@ internal class DataBaseReaderOracleIntegrationTest {
     fun init() {
         oracle.usingSid() // OracleContainer use `system` user for access
             .start()
+        sysDataSource = oracle.createSysDataSource()
+        executeAsSys {
+            createUser()
+        }
     }
 
     @AfterAll
     fun cleanup() {
+        sysDataSource.close()
         oracle.stop()
     }
 
@@ -132,8 +139,8 @@ internal class DataBaseReaderOracleIntegrationTest {
                     mapOf(
                         DataSourceId("persons") to DataSourceConfiguration(
                             oracle.jdbcUrl,
-                            oracle.username,
-                            oracle.password,
+                            USER_NAME,
+                            USER_PASSWORD,
                         )
                     ),
                     mapOf(
@@ -309,8 +316,29 @@ internal class DataBaseReaderOracleIntegrationTest {
         }
     }
 
+    private fun OracleContainer.createSysDataSource(): BasicDataSource = BasicDataSource().apply {
+        url = this@createSysDataSource.jdbcUrl
+        username = "sys as sysdba"
+        password = this@createSysDataSource.password
+    }
+
     private inline fun execute(action: Connection.() -> Unit) {
         oracle.createConnection("").use { it.action() }
+    }
+
+    private inline fun executeAsSys(action: Connection.() -> Unit) {
+        sysDataSource.connection.use { it.action() }
+    }
+
+    private fun Connection.createUser() {
+        with(createStatement()) {
+            execute("CREATE USER $USER_NAME IDENTIFIED BY $USER_PASSWORD DEFAULT TABLESPACE users QUOTA UNLIMITED ON users ACCOUNT UNLOCK")
+            execute("GRANT CREATE SESSION TO $USER_NAME")
+            execute("GRANT LOGMINING TO $USER_NAME")
+            execute("GRANT EXECUTE_CATALOG_ROLE TO $USER_NAME")
+            execute("GRANT SELECT ON V_${'$'}LOGMNR_CONTENTS TO $USER_NAME")
+        }
+        LOGGER.info { "user created" }
     }
 
     private fun Connection.dropTable() {
@@ -438,6 +466,9 @@ internal class DataBaseReaderOracleIntegrationTest {
 
         private const val TABLE_SPACE = "SYSTEM"
         private const val TABLE_NAME = "PERSON"
+
+        private const val USER_NAME = "th2logminer"
+        private const val USER_PASSWORD = "th2logminer"
 
         @OptIn(ExperimentalUnsignedTypes::class)
         fun ByteArray.toHex(): String = asUByteArray().joinToString("") { it.toString(radix = 16).padStart(2, '0') }
