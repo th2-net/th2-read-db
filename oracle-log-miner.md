@@ -14,15 +14,10 @@ All instructions below should be executed under `sys` user.
 ```roomsql
 CREATE USER <user> IDENTIFIED BY <pass> DEFAULT TABLESPACE users QUOTA UNLIMITED ON users ACCOUNT UNLOCK;
 
-GRANT DBA to <user>;
 GRANT CREATE SESSION TO <user>;
+GRANT LOGMINING to <user>;
 GRANT EXECUTE_CATALOG_ROLE TO <user>;
-GRANT EXECUTE ON DBMS_LOGMNR TO <user>;
-GRANT SELECT ON V_$DATABASE TO <user>;
 GRANT SELECT ON V_$LOGMNR_CONTENTS TO <user>;
-GRANT SELECT ON V_$ARCHIVED_LOG TO <user>;
-GRANT SELECT ON V_$LOG TO <user>;
-GRANT SELECT ON V_$LOGFILE TO <user>;
 ```
 
 All instructions below should be executed under created user.
