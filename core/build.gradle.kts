@@ -25,6 +25,12 @@ dependencies {
     implementation(libs.opencsv) {
         because("publishes raw messages in csv format")
     }
+    implementation(libs.commons.beanutils) {
+        because("""
+            CVE-2025-48734 vulnerability in 1.10.0 version.
+            FIXME: look at this dependency after update opencsv:5.11
+        """.trimIndent())
+    }
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlin.logging)
