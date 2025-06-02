@@ -23,7 +23,6 @@ auto-service-annotations = { group = "com.google.auto.service", name = "auto-ser
 auto-service = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto-service" }
 
 opencsv = { group = "com.opencsv", name = "opencsv", version = "5.11.1" }
-commons-beanutils = { group = 'commons-beanutils', name = 'commons-beanutils', version = '1.11.0' } # CVE-2025-48734 vulnerability in 1.10.0 version
 kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "7.0.7" }
 strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.13.0" }
