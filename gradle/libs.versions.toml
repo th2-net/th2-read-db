@@ -16,7 +16,7 @@ mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version =
 th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.3.1-dev" }
 th2-common = { group = "com.exactpro.th2", name = "common", version = "5.15.0-dev" }
 th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.5.0" }
-th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.4-dev" }
+th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.5-dev" }
 th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.1.0" }
 
 auto-service-annotations = { group = "com.google.auto.service", name = "auto-service-annotations", version.ref = "auto-service" }
