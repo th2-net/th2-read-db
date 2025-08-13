@@ -13,7 +13,7 @@ mysql-connector-j = { group = "com.mysql", name = "mysql-connector-j", version =
 ojdbc11 = { group = "com.oracle.database.jdbc", name = "ojdbc11", version = "23.9.0.25.07" }
 mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version = "13.1.1.jre11-preview" }
 
-th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.3.1-dev" }
+th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.4.0-dev" }
 th2-common = { group = "com.exactpro.th2", name = "common", version = "5.16.0-dev" }
 th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.5.0" }
 th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.5-dev" }
