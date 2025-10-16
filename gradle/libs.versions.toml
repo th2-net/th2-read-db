@@ -27,7 +27,7 @@ kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version =
 strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.13.0" }
 
-testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "1.21.3" }
+testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "2.0.1" }
 
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
 junit-bom = { group = "org.junit", name = "junit-bom", version = "5.13.4" }
