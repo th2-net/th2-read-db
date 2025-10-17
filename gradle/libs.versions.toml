@@ -17,7 +17,7 @@ th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version 
 th2-common = { group = "com.exactpro.th2", name = "common", version = "5.16.1-dev" }
 th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.7.2" }
 th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.6-dev" }
-th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.1.0" }
+th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.2.0" }
 
 auto-service-annotations = { group = "com.google.auto.service", name = "auto-service-annotations", version.ref = "auto-service" }
 auto-service = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto-service" }
@@ -27,7 +27,7 @@ kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version =
 strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.13.0" }
 
-testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "1.21.3" }
+testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "2.0.1" }
 
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
 junit-bom = { group = "org.junit", name = "junit-bom", version = "5.13.4" }
