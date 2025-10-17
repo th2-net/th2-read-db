@@ -40,8 +40,8 @@ dependencies {
 
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation("org.testcontainers:testcontainers")
-    testImplementation("org.testcontainers:mysql")
-    testImplementation("org.testcontainers:oracle-xe")
+    testImplementation("org.testcontainers:testcontainers-mysql")
+    testImplementation("org.testcontainers:testcontainers-oracle-xe")
     testImplementation("io.grpc:grpc-testing")
     testImplementation("io.grpc:grpc-inprocess")
 
@@ -70,6 +70,11 @@ tasks {
         }
         testLogging {
             showStandardStreams = true
+        }
+
+        if (Env.isPodmanInstalled) {
+            environment("DOCKER_HOST", "unix:///run/user/${Env.uid}/podman/podman.sock")
+            environment("TESTCONTAINERS_RYUK_DISABLED", "true")
         }
     }
 }
