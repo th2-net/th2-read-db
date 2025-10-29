@@ -30,7 +30,7 @@ commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version 
 testcontainers-bom = { group = "org.testcontainers", name = "testcontainers-bom", version = "2.0.1" }
 
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
-junit-bom = { group = "org.junit", name = "junit-bom", version = "5.13.4" }
+junit-bom = { group = "org.junit", name = "junit-bom", version = "6.0.0" }
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version = "6.1.0" }
 
 [plugins]
