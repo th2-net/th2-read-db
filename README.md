@@ -1,4 +1,4 @@
-# th2-read-db 0.13.1
+# th2-read-db 0.13.2
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -349,7 +349,7 @@ spec:
 
 ## Changes
 
-### 0.13.1
+### 0.13.2
 
 + produce multi-platform docker image
   + migrated to [amazoncorretto:11-alpine-jdk](https://hub.docker.com/layers/library/amazoncorretto/11-alpine-jdk) docker image as base

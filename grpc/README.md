@@ -9,6 +9,10 @@ You can:
 
 # Release notes:
 
+## 0.0.12
++ updated th2 gradle plugin `0.3.10`
++ updated grpc-common: `4.7.2`
+
 ## 0.0.11
 + updated th2 gradle plugin `0.2.4`
 + updated grpc-common: `4.5.0` 
