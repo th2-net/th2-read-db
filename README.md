@@ -1,4 +1,4 @@
-# th2-read-db 0.13.0
+# th2-read-db 0.13.1
 
 The read-db is a component for extracting data from databases using JDBC technology. If database has JDBC driver the read can work with the database
 
@@ -348,6 +348,24 @@ spec:
 [How to configure th2-read-db to pull data from redo log](oracle-log-miner.md)
 
 ## Changes
+
+### 0.13.1
+
++ produce multi-platform docker image
+  + migrated to [amazoncorretto:11-alpine-jdk](https://hub.docker.com/layers/library/amazoncorretto/11-alpine-jdk) docker image as base
++ updated:
+  + th2 gradle plugin: `0.3.10` based on bom: `4.14.2`
+  + common: `5.16.1-dev`
+  + grpc-common: `4.7.2`
+  + common-utils: `2.4.0-dev`
+  + kotlin: `2.2.21`
+  + kotlinx-coroutines: `1.10.2`
+  + kotlin-logging: `7.0.13`
+  + opencsv: `5.12.0`
+  + postgresql: `42.7.8`
+  + mysql-connector-j: `9.5.0`
+  + ojdbc11: `23.26.0.0.0`
+  + mssql-jdbc: `13.2.1.jre11`
 
 ### 0.13.0
 + updated:
