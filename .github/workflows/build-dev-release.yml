@@ -179,6 +179,7 @@ jobs:
       versionNumber: ${{ needs.app-version.outputs.version }}
       dockerContext: '.'
       gradleProjectPath: 'app'
+      multi-platform: true
       gradleParameters: '["clean", "build", "dockerPrepare"]'
     secrets:
       docker-password: ${{ secrets.GITHUB_TOKEN }}

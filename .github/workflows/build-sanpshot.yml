@@ -93,6 +93,7 @@ jobs:
       version: ${{ needs.app-version.outputs.version }}
       versionNumber: ${{ needs.app-version.outputs.versionNumber }}
       dockerContext: '.'
+      multi-platform: true
       gradleProjectPath: 'app'
       gradleParameters: ${{ format('["clean", "build", "dockerPrepare", "-Pversion_suffix={0}"]', needs.app-version.outputs.versionSuffix) }}
     secrets:
