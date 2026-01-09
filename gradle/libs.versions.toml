@@ -2,7 +2,7 @@
 kotlin = "2.3.0"
 kotlinx-coroutines = "1.10.2"
 auto-service = "1.1.1"
-th2-plugin = "0.3.11"
+th2-plugin = "0.3.14"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
