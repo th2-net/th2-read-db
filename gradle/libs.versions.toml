@@ -15,7 +15,7 @@ mssql-jdbc = { group = "com.microsoft.sqlserver", name = "mssql-jdbc", version =
 
 th2-common-utils = { group = "com.exactpro.th2", name = "common-utils", version = "2.4.0-dev" }
 th2-common = { group = "com.exactpro.th2", name = "common", version = "5.17.2-dev" }
-th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.7.4" }
+th2-grpc-common = { group = "com.exactpro.th2", name = "grpc-common", version = "4.7.5" }
 th2-lw-data-provider-utils = { group = "com.exactpro.th2", name = "lw-data-provider-utils", version = "0.0.8-dev" }
 th2-junit-jupiter-integration = { group = "com.exactpro.th2", name = "junit-jupiter-integration", version = "0.2.0" }
 
