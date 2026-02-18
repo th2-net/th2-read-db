@@ -23,7 +23,7 @@ auto-service-annotations = { group = "com.google.auto.service", name = "auto-ser
 auto-service = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto-service" }
 
 opencsv = { group = "com.opencsv", name = "opencsv", version = "5.12.0" }
-kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "7.0.14" }
+kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "8.0.01" }
 strikt-core = { group = "io.strikt", name = "strikt-core", version = "0.34.1" }
 commons-dbcp2 = { group = "org.apache.commons", name = "commons-dbcp2", version = "2.14.0" }
 
