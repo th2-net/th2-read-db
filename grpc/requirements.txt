@@ -13,5 +13,5 @@
 #   limitations under the License.
 
 grpcio-tools==1.56.0
-th2-grpc-common==4.5.0rc1
+th2-grpc-common==4.7.5
 mypy-protobuf==3.4

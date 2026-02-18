@@ -12,3 +12,9 @@ updates:
       - dependencies
     schedule:
       interval: daily
+  - package-ecosystem: pip
+    directory: /grpc/
+    labels:
+      - dependencies
+    schedule:
+      interval: daily
