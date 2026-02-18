@@ -120,9 +120,9 @@ setup(
     license='Apache License 2.0',
     python_requires='>=3.7',
     install_requires=[
-        'grpcio-tools==1.56.0',
-        'th2-grpc-common==4.7.5',
-        'mypy-protobuf==3.4'
+        'grpcio-tools>=1.75.1,<2',
+        'th2-grpc-common>=4.7.5,<5',
+        'mypy-protobuf>=3.6,<6'
     ],
     packages=packages,
     package_data=package_data,

@@ -11,7 +11,9 @@ You can:
 
 ## 0.0.13
 + updated th2 grpc plugin `0.3.14`
-+ updated grpc-common: `4.7.5`
+  + grpc-common: `4.7.5`
+  + grpcio-tools: `1.75.1`
+  + mypy-protobuf: `3.6`
 
 ## 0.0.12
 + updated th2 gradle plugin `0.3.10`
