@@ -1,4 +1,4 @@
-# gRPC for read-db (0.0.11)
+# gRPC for read-db (0.0.13)
 
 The read-db provides you with gRPC interface for interacting with database.
 You can:
@@ -8,6 +8,12 @@ You can:
 + submit pulling requests and stop them - `StartPulling` and `StopPulling` methods
 
 # Release notes:
+
+## 0.0.13
++ updated th2 grpc plugin `0.3.14`
+  + grpc-common: `4.7.5`
+  + grpcio-tools: `1.75.1`
+  + mypy-protobuf: `3.6`
 
 ## 0.0.12
 + updated th2 gradle plugin `0.3.10`
