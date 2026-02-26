@@ -19,7 +19,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
       - name: Build with Gradle
         run: ./gradlew --info clean integrationTest
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: integration-test-results
